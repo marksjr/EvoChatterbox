@@ -1,0 +1,9 @@
+.venv/
+.cache/
+output/
+__pycache__/
+*.pyc
+uvicorn.out.log
+uvicorn.err.log
+dxdiag.txt
+.cuda_check.tmp
