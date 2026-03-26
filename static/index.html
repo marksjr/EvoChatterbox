@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8">
@@ -27,6 +27,16 @@
             <span>Emocao</span>
             <select id="emotion" name="emotion_preset"></select>
             <small id="emotion-help" class="hint">Preset de entonacao baseado nos controles nativos do modelo.</small>
+          </label>
+
+          <label>
+            <span>Qualidade</span>
+            <select id="quality-mode" name="quality_mode">
+              <option value="ultra" selected>Ultra qualidade</option>
+              <option value="max">Qualidade maxima</option>
+              <option value="fast">Mais rapido</option>
+            </select>
+            <small id="quality-help" class="hint">Ultra qualidade divide o texto em trechos menores e adiciona pausas mais naturais.</small>
           </label>
 
           <label>
@@ -115,4 +125,3 @@
   <script src="/static/app.js"></script>
 </body>
 </html>
-

@@ -1,4 +1,4 @@
-const form = document.getElementById("tts-form");
+﻿const form = document.getElementById("tts-form");
 const statusLabel = document.getElementById("status");
 const player = document.getElementById("player");
 const downloadLink = document.getElementById("download");
@@ -18,6 +18,8 @@ const resetEmotionButton = document.getElementById("reset-emotion");
 const exaggerationInput = document.getElementById("exaggeration");
 const cfgInput = document.getElementById("cfg_weight");
 const temperatureInput = document.getElementById("temperature");
+const qualityMode = document.getElementById("quality-mode");
+const qualityHelp = document.getElementById("quality-help");
 
 const emotionPresets = [
   { id: "neutral", label: "Neutro", help: "Equilibrado para uso geral.", exaggeration: 0.5, cfg: 0.5, temperature: 0.8 },
@@ -45,6 +47,12 @@ const emotionPresets = [
   { id: "instructional", label: "Instrucional", help: "Claro e didatico.", exaggeration: 0.25, cfg: 0.75, temperature: 0.55 }
 ];
 
+const qualityPresets = {
+  ultra: { exaggeration: 0.3, cfg: 0.7, temperature: 0.55 },
+  max: { exaggeration: 0.4, cfg: 0.6, temperature: 0.65 },
+  fast: { exaggeration: 0.5, cfg: 0.5, temperature: 0.8 }
+};
+
 let timerId = null;
 let startedAt = 0;
 let currentAudioUrl = null;
@@ -70,6 +78,17 @@ function syncDisplayedSliderValues() {
   document.getElementById("exaggeration-value").textContent = Number(exaggerationInput.value).toFixed(2);
   document.getElementById("cfg-value").textContent = Number(cfgInput.value).toFixed(2);
   document.getElementById("temperature-value").textContent = Number(temperatureInput.value).toFixed(2);
+}
+
+function applyQualityPreset(mode) {
+  const preset = qualityPresets[mode];
+  if (!preset) {
+    return;
+  }
+  exaggerationInput.value = preset.exaggeration;
+  cfgInput.value = preset.cfg;
+  temperatureInput.value = preset.temperature;
+  syncDisplayedSliderValues();
 }
 
 function renderEmotionChips() {
@@ -135,6 +154,18 @@ function updateEmotionHelp() {
   emotionHelp.textContent = `${preset.help} Exaggeration ${preset.exaggeration.toFixed(2)}, CFG ${preset.cfg.toFixed(2)}, Temperature ${preset.temperature.toFixed(2)}.`;
 }
 
+function updateQualityHelp() {
+  if (qualityMode.value === "ultra") {
+    qualityHelp.textContent = "Ultra qualidade divide o texto em trechos menores e adiciona pausas mais naturais. Melhor para portugues e textos maiores.";
+    return;
+  }
+  if (qualityMode.value === "max") {
+    qualityHelp.textContent = "Qualidade maxima divide o texto em trechos menores para melhorar estabilidade e naturalidade.";
+    return;
+  }
+  qualityHelp.textContent = "Mais rapido gera o texto inteiro de uma vez. Pode perder estabilidade em textos longos.";
+}
+
 function updateCharCount() {
   const count = textField.value.length;
   charCount.textContent = `${count} caracteres`;
@@ -195,6 +226,10 @@ function updateLanguageHelp() {
 textField.addEventListener("input", updateCharCount);
 languageSelect.addEventListener("change", updateLanguageHelp);
 emotionSelect.addEventListener("change", () => applyEmotionPreset(emotionSelect.value));
+qualityMode.addEventListener("change", () => {
+  applyQualityPreset(qualityMode.value);
+  updateQualityHelp();
+});
 resetEmotionButton.addEventListener("click", resetEmotionPreset);
 
 setRangeValue("exaggeration", "exaggeration-value");
@@ -202,8 +237,10 @@ setRangeValue("cfg_weight", "cfg-value");
 setRangeValue("temperature", "temperature-value");
 loadEmotionPresets();
 applyEmotionPreset("neutral");
+applyQualityPreset(qualityMode.value);
 updateCharCount();
 loadConfig();
+updateQualityHelp();
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -241,6 +278,11 @@ form.addEventListener("submit", async (event) => {
     convertedCount.textContent = `${response.headers.get("X-Character-Count") || textField.value.length} caracteres`;
     backendUsed.textContent = response.headers.get("X-Backend") || "desconhecido";
     deviceUsed.textContent = (response.headers.get("X-Device") || "desconhecido").toUpperCase();
+    const returnedQuality = response.headers.get("X-Quality-Mode");
+    if (returnedQuality) {
+      qualityMode.value = returnedQuality;
+      updateQualityHelp();
+    }
     statusLabel.textContent = `Audio gerado com sucesso em ${elapsedLabel.textContent}.`;
   } catch (error) {
     statusLabel.textContent = error.message;

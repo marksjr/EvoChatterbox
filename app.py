@@ -2,6 +2,7 @@
 
 import os
 import platform
+import re
 import shutil
 import tempfile
 from pathlib import Path
@@ -25,6 +26,7 @@ os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 import torch
 import torchaudio as ta
+from chatterbox.models.s3gen import S3GEN_SR
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS, SUPPORTED_LANGUAGES
 from chatterbox.tts import ChatterboxTTS
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
@@ -39,6 +41,10 @@ _tts_model = None
 _tts_model_lock = Lock()
 _multilingual_model = None
 _multilingual_model_lock = Lock()
+MAX_CHUNK_CHARS = 220
+ULTRA_CHUNK_CHARS = 140
+CHUNK_SILENCE_MS = 140
+ULTRA_CHUNK_SILENCE_MS = 220
 
 
 def resolve_device() -> str:
@@ -61,6 +67,84 @@ def get_runtime_info() -> dict[str, str | bool | None]:
         "gpu_name": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
         "cpu_name": platform.processor() or None,
     }
+
+
+def normalize_text(text: str) -> str:
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+def split_text_for_quality(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[str]:
+    text = normalize_text(text)
+    if len(text) <= max_chars:
+        return [text]
+
+    parts = re.split(r"(?<=[\.\!\?;:。！？])\s+", text)
+    chunks: list[str] = []
+    current = ""
+
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+
+        if len(part) > max_chars:
+            words = part.split(" ")
+            long_current = ""
+            for word in words:
+                candidate = f"{long_current} {word}".strip()
+                if len(candidate) > max_chars and long_current:
+                    chunks.append(long_current)
+                    long_current = word
+                else:
+                    long_current = candidate
+            if long_current:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(long_current)
+            continue
+
+        candidate = f"{current} {part}".strip()
+        if len(candidate) > max_chars and current:
+            chunks.append(current)
+            current = part
+        else:
+            current = candidate
+
+    if current:
+        chunks.append(current)
+
+    return chunks or [text]
+
+
+def generate_chunked_audio(
+    model: object,
+    backend: str,
+    text: str,
+    language_id: str,
+    generate_kwargs: dict,
+    max_chunk_chars: int = MAX_CHUNK_CHARS,
+    silence_ms: int = CHUNK_SILENCE_MS,
+) -> torch.Tensor:
+    chunks = split_text_for_quality(text, max_chars=max_chunk_chars)
+    silence_samples = int((silence_ms / 1000) * S3GEN_SR)
+    silence = torch.zeros((1, silence_samples), dtype=torch.float32)
+    rendered: list[torch.Tensor] = []
+
+    for index, chunk in enumerate(chunks):
+        if backend == "multilingual":
+            wav = model.generate(chunk, language_id=language_id, **generate_kwargs)
+        else:
+            wav = model.generate(chunk, **generate_kwargs)
+
+        if wav.dim() == 1:
+            wav = wav.unsqueeze(0)
+        rendered.append(wav.cpu())
+        if index < len(chunks) - 1:
+            rendered.append(silence)
+
+    return torch.cat(rendered, dim=1) if len(rendered) > 1 else rendered[0]
 
 
 def get_tts_model() -> ChatterboxTTS:
@@ -144,12 +228,13 @@ def config() -> JSONResponse:
 async def generate_audio(
     text: str = Form(...),
     language_id: str = Form("en"),
+    quality_mode: str = Form("max"),
     exaggeration: float = Form(0.5),
     cfg_weight: float = Form(0.5),
     temperature: float = Form(0.8),
     audio_prompt: UploadFile | None = File(default=None),
 ) -> FileResponse:
-    text = text.strip()
+    text = normalize_text(text)
     if not text:
         raise HTTPException(status_code=400, detail="Texto vazio.")
 
@@ -171,10 +256,23 @@ async def generate_audio(
             "temperature": temperature,
         }
 
-        if backend == "multilingual":
-            wav = model.generate(text, language_id=language_id, **generate_kwargs)
+        if quality_mode == "ultra":
+            wav = generate_chunked_audio(
+                model,
+                backend,
+                text,
+                language_id,
+                generate_kwargs,
+                max_chunk_chars=ULTRA_CHUNK_CHARS,
+                silence_ms=ULTRA_CHUNK_SILENCE_MS,
+            )
+        elif quality_mode == "max":
+            wav = generate_chunked_audio(model, backend, text, language_id, generate_kwargs)
         else:
-            wav = model.generate(text, **generate_kwargs)
+            if backend == "multilingual":
+                wav = model.generate(text, language_id=language_id, **generate_kwargs)
+            else:
+                wav = model.generate(text, **generate_kwargs)
 
         output_path = OUTPUT_DIR / "latest.wav"
         ta.save(str(output_path), wav.cpu(), model.sr)
@@ -184,6 +282,7 @@ async def generate_audio(
             "X-Language-Id": language_id,
             "X-Backend": backend,
             "X-Device": resolve_device(),
+            "X-Quality-Mode": quality_mode,
         }
         return FileResponse(
             output_path,
