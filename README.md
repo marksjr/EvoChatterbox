@@ -103,17 +103,6 @@ Arquivos auxiliares para publicacao:
 - Release notes: [RELEASE_TEMPLATE.md](./RELEASE_TEMPLATE.md)
 - Checklist de release portable: [CHECKLIST_RELEASE_PORTABLE.md](./CHECKLIST_RELEASE_PORTABLE.md)
 
-## O que subir no GitHub
-
-Suba o codigo e a documentacao, sem arquivos gerados localmente.
-
-Nao suba:
-
-- `.venv/`
-- `.cache/`
-- `output/`
-- `__pycache__/`
-
 ## Observacoes
 
 - O primeiro uso pode demorar porque o sistema baixa dependencias e modelos.
