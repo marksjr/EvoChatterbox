@@ -26,9 +26,9 @@ O launcher principal e [INICIAR.bat](./INICIAR.bat). Ele:
 - suporte ao modelo padrao e ao modelo multilingual
 - upload opcional de audio de referencia
 - presets de emocao
+- modo de estabilidade para textos longos
 - contagem de caracteres
 - cronometro de geracao
-- tema dark
 - API `FastAPI` com `/docs` e `/redoc`
 
 ## Requisitos
@@ -72,6 +72,24 @@ Override manual:
 - `CHATTERBOX_DEVICE=auto`
 - `CHATTERBOX_DEVICE=cpu`
 - `CHATTERBOX_DEVICE=cuda`
+
+## Estabilidade e validacoes
+
+- A opcao `Estabilidade` nao troca de modelo; ela muda principalmente o chunking e as pausas entre trechos.
+- `Estabilidade alta` e `Estabilidade equilibrada` tendem a soar melhor em textos longos.
+- `Processamento direto` costuma ser mais rapido, mas pode perder estabilidade em entradas longas.
+- O audio de referencia aceita `.wav`, `.mp3`, `.flac`, `.m4a` e `.ogg`, com limite de `15 MB`.
+- Cada requisicao gera um arquivo temporario proprio para evitar conflito entre chamadas simultaneas.
+
+## Testes
+
+Executar testes unitarios:
+
+```powershell
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
+```
+
+Os testes cobrem validacao, divisao de texto, selecao de backend e contrato basico do endpoint.
 
 ## Estrutura principal
 

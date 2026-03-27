@@ -1,4 +1,4 @@
-﻿const form = document.getElementById("tts-form");
+const form = document.getElementById("tts-form");
 const statusLabel = document.getElementById("status");
 const player = document.getElementById("player");
 const downloadLink = document.getElementById("download");
@@ -20,6 +20,7 @@ const cfgInput = document.getElementById("cfg_weight");
 const temperatureInput = document.getElementById("temperature");
 const qualityMode = document.getElementById("quality-mode");
 const qualityHelp = document.getElementById("quality-help");
+const audioPromptHelp = document.getElementById("audio-prompt-help");
 
 const emotionPresets = [
   { id: "neutral", label: "Neutro", help: "Equilibrado para uso geral.", exaggeration: 0.5, cfg: 0.5, temperature: 0.8 },
@@ -53,9 +54,17 @@ const qualityPresets = {
   fast: { exaggeration: 0.5, cfg: 0.5, temperature: 0.8 }
 };
 
+const qualityHelpByMode = {
+  ultra: "Estabilidade alta divide o texto em trechos menores e adiciona pausas mais naturais. Melhor para portugues e textos maiores.",
+  max: "Estabilidade equilibrada divide o texto em trechos menores para melhorar estabilidade e naturalidade.",
+  fast: "Processamento direto gera o texto inteiro de uma vez. Pode perder estabilidade em textos longos."
+};
+
 let timerId = null;
 let startedAt = 0;
 let currentAudioUrl = null;
+let manualSliderOverride = false;
+let applyingPreset = false;
 
 function formatElapsed(ms) {
   const totalSeconds = Math.floor(ms / 1000);
@@ -70,7 +79,12 @@ function setRangeValue(inputId, outputId) {
   const sync = () => {
     output.textContent = Number(input.value).toFixed(2);
   };
-  input.addEventListener("input", sync);
+  input.addEventListener("input", () => {
+    if (!applyingPreset) {
+      manualSliderOverride = true;
+    }
+    sync();
+  });
   sync();
 }
 
@@ -80,15 +94,27 @@ function syncDisplayedSliderValues() {
   document.getElementById("temperature-value").textContent = Number(temperatureInput.value).toFixed(2);
 }
 
-function applyQualityPreset(mode) {
-  const preset = qualityPresets[mode];
-  if (!preset) {
-    return;
+function applyControlPreset(preset, force = false) {
+  if (!preset || (manualSliderOverride && !force)) {
+    syncDisplayedSliderValues();
+    return false;
   }
+
+  applyingPreset = true;
   exaggerationInput.value = preset.exaggeration;
   cfgInput.value = preset.cfg;
   temperatureInput.value = preset.temperature;
   syncDisplayedSliderValues();
+  applyingPreset = false;
+  if (force) {
+    manualSliderOverride = false;
+  }
+  return true;
+}
+
+function applyQualityPreset(mode, force = false) {
+  const preset = qualityPresets[mode];
+  return applyControlPreset(preset, force);
 }
 
 function renderEmotionChips() {
@@ -127,22 +153,20 @@ function loadEmotionPresets() {
   updateActiveEmotionChip();
 }
 
-function applyEmotionPreset(presetId) {
+function applyEmotionPreset(presetId, force = false) {
   const preset = emotionPresets.find((item) => item.id === presetId);
   if (!preset) {
     return;
   }
-  exaggerationInput.value = preset.exaggeration;
-  cfgInput.value = preset.cfg;
-  temperatureInput.value = preset.temperature;
-  syncDisplayedSliderValues();
+  applyControlPreset(preset, force);
   updateEmotionHelp();
   updateActiveEmotionChip();
 }
 
 function resetEmotionPreset() {
   emotionSelect.value = "neutral";
-  applyEmotionPreset("neutral");
+  manualSliderOverride = false;
+  applyEmotionPreset("neutral", true);
 }
 
 function updateEmotionHelp() {
@@ -151,19 +175,14 @@ function updateEmotionHelp() {
     emotionHelp.textContent = "Preset de entonacao baseado nos controles nativos do modelo.";
     return;
   }
-  emotionHelp.textContent = `${preset.help} Exaggeration ${preset.exaggeration.toFixed(2)}, CFG ${preset.cfg.toFixed(2)}, Temperature ${preset.temperature.toFixed(2)}.`;
+
+  const suffix = manualSliderOverride ? " Controles manuais preservados." : "";
+  emotionHelp.textContent = `${preset.help} Exaggeration ${preset.exaggeration.toFixed(2)}, CFG ${preset.cfg.toFixed(2)}, Temperature ${preset.temperature.toFixed(2)}.${suffix}`;
 }
 
 function updateQualityHelp() {
-  if (qualityMode.value === "ultra") {
-    qualityHelp.textContent = "Ultra qualidade divide o texto em trechos menores e adiciona pausas mais naturais. Melhor para portugues e textos maiores.";
-    return;
-  }
-  if (qualityMode.value === "max") {
-    qualityHelp.textContent = "Qualidade maxima divide o texto em trechos menores para melhorar estabilidade e naturalidade.";
-    return;
-  }
-  qualityHelp.textContent = "Mais rapido gera o texto inteiro de uma vez. Pode perder estabilidade em textos longos.";
+  const baseHelp = qualityHelpByMode[qualityMode.value] || qualityHelpByMode.max;
+  qualityHelp.textContent = manualSliderOverride ? `${baseHelp} Controles manuais preservados.` : baseHelp;
 }
 
 function updateCharCount() {
@@ -186,11 +205,34 @@ function stopTimer() {
   }
 }
 
+function renderQualityModes(modes) {
+  if (!Array.isArray(modes) || modes.length === 0) {
+    return;
+  }
+
+  const currentValue = qualityMode.value;
+  qualityMode.innerHTML = "";
+  for (const mode of modes) {
+    const option = document.createElement("option");
+    option.value = mode.id;
+    option.textContent = mode.label;
+    if (mode.id === currentValue) {
+      option.selected = true;
+    }
+    qualityMode.appendChild(option);
+  }
+
+  if (![...qualityMode.options].some((option) => option.selected)) {
+    qualityMode.value = modes.find((mode) => mode.id === "max")?.id || modes[0].id;
+  }
+}
+
 async function loadConfig() {
   try {
     const response = await fetch("/config");
     const config = await response.json();
 
+    languageSelect.innerHTML = "";
     for (const language of config.languages) {
       const option = document.createElement("option");
       option.value = language.id;
@@ -202,8 +244,14 @@ async function loadConfig() {
       languageSelect.appendChild(option);
     }
 
+    renderQualityModes(config.quality_modes);
+    if (typeof config.audio_prompt_max_mb === "number") {
+      audioPromptHelp.textContent = `Opcional para aproximar o timbre. Ate ${config.audio_prompt_max_mb} MB.`;
+    }
+
     deviceUsed.textContent = config.device.toUpperCase();
     updateLanguageHelp();
+    updateQualityHelp();
   } catch (error) {
     languageHelp.textContent = "Nao foi possivel carregar os idiomas.";
   }
@@ -225,10 +273,14 @@ function updateLanguageHelp() {
 
 textField.addEventListener("input", updateCharCount);
 languageSelect.addEventListener("change", updateLanguageHelp);
-emotionSelect.addEventListener("change", () => applyEmotionPreset(emotionSelect.value));
+emotionSelect.addEventListener("change", () => {
+  applyEmotionPreset(emotionSelect.value);
+  updateQualityHelp();
+});
 qualityMode.addEventListener("change", () => {
   applyQualityPreset(qualityMode.value);
   updateQualityHelp();
+  updateEmotionHelp();
 });
 resetEmotionButton.addEventListener("click", resetEmotionPreset);
 
@@ -236,8 +288,8 @@ setRangeValue("exaggeration", "exaggeration-value");
 setRangeValue("cfg_weight", "cfg-value");
 setRangeValue("temperature", "temperature-value");
 loadEmotionPresets();
-applyEmotionPreset("neutral");
-applyQualityPreset(qualityMode.value);
+applyEmotionPreset("neutral", true);
+applyQualityPreset(qualityMode.value, true);
 updateCharCount();
 loadConfig();
 updateQualityHelp();
@@ -274,6 +326,7 @@ form.addEventListener("submit", async (event) => {
 
     player.src = currentAudioUrl;
     downloadLink.href = currentAudioUrl;
+    downloadLink.download = response.headers.get("X-Output-Filename") || "chatterbox.wav";
     downloadLink.classList.remove("hidden");
     convertedCount.textContent = `${response.headers.get("X-Character-Count") || textField.value.length} caracteres`;
     backendUsed.textContent = response.headers.get("X-Backend") || "desconhecido";

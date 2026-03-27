@@ -1,4 +1,4 @@
-﻿# API Evo Chatterbox
+# API Evo Chatterbox
 
 Esta API foi criada com `FastAPI`.
 
@@ -37,7 +37,7 @@ Exemplo de resposta:
 
 ### `GET /config`
 
-Retorna configuracao da aplicacao, dispositivo ativo e idiomas suportados.
+Retorna configuracao da aplicacao, dispositivo ativo, idiomas suportados e metadados da UI.
 
 Exemplo:
 
@@ -45,6 +45,21 @@ Exemplo:
 {
   "device": "cuda",
   "default_language": "en",
+  "audio_prompt_max_mb": 15,
+  "quality_modes": [
+    {
+      "id": "ultra",
+      "label": "Estabilidade alta"
+    },
+    {
+      "id": "max",
+      "label": "Estabilidade equilibrada"
+    },
+    {
+      "id": "fast",
+      "label": "Processamento direto"
+    }
+  ],
   "languages": [
     {
       "id": "en",
@@ -74,18 +89,25 @@ Campos:
   Texto a converter em voz.
 - `language_id`:
   Idioma. Ex.: `en`, `pt`, `es`, `fr`, `de`, `ja`.
+- `quality_mode`:
+  Estrategia de processamento do texto.
+  Valores aceitos: `ultra`, `max`, `fast`.
 - `exaggeration`:
-  Intensidade expressiva. Intervalo comum: `0.0` a `1.0`.
+  Intensidade expressiva. Intervalo aceito: `0.0` a `1.0`.
 - `cfg_weight`:
-  Controle de aderencia da geracao. Intervalo comum: `0.0` a `1.0`.
+  Controle de aderencia da geracao. Intervalo aceito: `0.0` a `1.0`.
 - `temperature`:
-  Variacao da geracao. Intervalo comum: `0.1` a `2.0`.
+  Variacao da geracao. Intervalo aceito: `0.1` a `2.0`.
 - `audio_prompt`:
   Arquivo opcional de referencia de voz.
+  Formatos aceitos: `.wav`, `.mp3`, `.flac`, `.m4a`, `.ogg`.
+  Tamanho maximo: `15 MB`.
 
 Resposta:
 
 - `200 OK` com `audio/wav`
+- `400 Bad Request` para campos invalidos
+- `413 Payload Too Large` para `audio_prompt` acima do limite
 
 Headers uteis:
 
@@ -93,6 +115,8 @@ Headers uteis:
 - `X-Language-Id`
 - `X-Backend`
 - `X-Device`
+- `X-Quality-Mode`
+- `X-Output-Filename`
 
 ## Exemplo com cURL
 
@@ -100,6 +124,7 @@ Headers uteis:
 curl -X POST "http://127.0.0.1:8000/generate" ^
   -F "text=Ola, este e um teste de voz." ^
   -F "language_id=pt" ^
+  -F "quality_mode=max" ^
   -F "exaggeration=0.5" ^
   -F "cfg_weight=0.5" ^
   -F "temperature=0.8" ^
@@ -112,6 +137,7 @@ curl -X POST "http://127.0.0.1:8000/generate" ^
 $form = @{
   text = "Ola, este e um teste de voz."
   language_id = "pt"
+  quality_mode = "max"
   exaggeration = "0.5"
   cfg_weight = "0.5"
   temperature = "0.8"
@@ -131,6 +157,7 @@ response = requests.post(
     data={
         "text": "Ola, este e um teste de voz.",
         "language_id": "pt",
+        "quality_mode": "max",
         "exaggeration": "0.5",
         "cfg_weight": "0.5",
         "temperature": "0.8",
@@ -142,6 +169,7 @@ with open("chatterbox.wav", "wb") as f:
 
 print(response.headers.get("X-Backend"))
 print(response.headers.get("X-Device"))
+print(response.headers.get("X-Output-Filename"))
 ```
 
 ## Observacoes
@@ -149,6 +177,8 @@ print(response.headers.get("X-Device"))
 - `en` usa o backend padrao.
 - Demais idiomas usam o backend `multilingual`.
 - O primeiro uso pode demorar por causa do carregamento dos modelos.
+- `quality_mode` melhora principalmente estabilidade em textos longos; nao troca o modelo.
+- Cada requisicao gera um arquivo temporario proprio no servidor para evitar conflito entre requisicoes simultaneas.
 - Se houver GPU NVIDIA disponivel, a API tenta usar `CUDA` automaticamente.
 
 ## Postman

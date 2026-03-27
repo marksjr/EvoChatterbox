@@ -1,12 +1,15 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
+import logging
 import os
 import platform
 import re
 import shutil
 import tempfile
+import time
 from pathlib import Path
 from threading import Lock
+from uuid import uuid4
 
 BASE_DIR = Path(__file__).resolve().parent
 STATIC_DIR = BASE_DIR / "static"
@@ -29,13 +32,20 @@ import torchaudio as ta
 from chatterbox.models.s3gen import S3GEN_SR
 from chatterbox.mtl_tts import ChatterboxMultilingualTTS, SUPPORTED_LANGUAGES
 from chatterbox.tts import ChatterboxTTS
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from huggingface_hub import snapshot_download
+from starlette.background import BackgroundTask
 
 app = FastAPI(title="Evo Chatterbox")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+logging.basicConfig(
+    level=os.getenv("CHATTERBOX_LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("evo_chatterbox")
 
 _tts_model = None
 _tts_model_lock = Lock()
@@ -45,6 +55,14 @@ MAX_CHUNK_CHARS = 220
 ULTRA_CHUNK_CHARS = 140
 CHUNK_SILENCE_MS = 140
 ULTRA_CHUNK_SILENCE_MS = 220
+DEFAULT_QUALITY_MODE = "max"
+VALID_QUALITY_MODES = {"ultra", "max", "fast"}
+ALLOWED_AUDIO_PROMPT_EXTENSIONS = {".wav", ".mp3", ".flac", ".m4a", ".ogg"}
+MAX_AUDIO_PROMPT_BYTES = 15 * 1024 * 1024
+MAX_EXAGGERATION = 1.0
+MAX_CFG_WEIGHT = 1.0
+MIN_TEMPERATURE = 0.1
+MAX_TEMPERATURE = 2.0
 
 
 def resolve_device() -> str:
@@ -79,7 +97,7 @@ def split_text_for_quality(text: str, max_chars: int = MAX_CHUNK_CHARS) -> list[
     if len(text) <= max_chars:
         return [text]
 
-    parts = re.split(r"(?<=[\.\!\?;:。！？])\s+", text)
+    parts = re.split(r"(?<=[\.\!\?;:\u3002\uff01\uff1f])\s+", text)
     chunks: list[str] = []
     current = ""
 
@@ -196,6 +214,89 @@ def resolve_generation_backend(language_id: str) -> tuple[object, str]:
     return get_multilingual_model(), "multilingual"
 
 
+def validate_quality_mode(quality_mode: str) -> str:
+    normalized_mode = quality_mode.strip().lower() or DEFAULT_QUALITY_MODE
+    if normalized_mode not in VALID_QUALITY_MODES:
+        allowed_modes = ", ".join(sorted(VALID_QUALITY_MODES))
+        raise HTTPException(status_code=400, detail=f"Modo de estabilidade invalido. Use: {allowed_modes}.")
+    return normalized_mode
+
+
+def validate_generation_controls(exaggeration: float, cfg_weight: float, temperature: float) -> None:
+    if not 0.0 <= exaggeration <= MAX_EXAGGERATION:
+        raise HTTPException(status_code=400, detail="Exaggeration deve ficar entre 0.0 e 1.0.")
+    if not 0.0 <= cfg_weight <= MAX_CFG_WEIGHT:
+        raise HTTPException(status_code=400, detail="CFG Weight deve ficar entre 0.0 e 1.0.")
+    if not MIN_TEMPERATURE <= temperature <= MAX_TEMPERATURE:
+        raise HTTPException(status_code=400, detail="Temperature deve ficar entre 0.1 e 2.0.")
+
+
+def validate_audio_prompt(audio_prompt: UploadFile | None) -> str | None:
+    if audio_prompt is None or not audio_prompt.filename:
+        return None
+
+    suffix = Path(audio_prompt.filename).suffix.lower()
+    if suffix not in ALLOWED_AUDIO_PROMPT_EXTENSIONS:
+        allowed_extensions = ", ".join(sorted(ALLOWED_AUDIO_PROMPT_EXTENSIONS))
+        raise HTTPException(
+            status_code=400,
+            detail=f"Audio de referencia invalido. Use um destes formatos: {allowed_extensions}.",
+        )
+    return suffix
+
+
+def save_upload_with_limit(upload: UploadFile, destination: Path, max_bytes: int = MAX_AUDIO_PROMPT_BYTES) -> None:
+    written_bytes = 0
+    with destination.open("wb") as buffer:
+        while True:
+            chunk = upload.file.read(1024 * 1024)
+            if not chunk:
+                break
+            written_bytes += len(chunk)
+            if written_bytes > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Audio de referencia excede o limite de {max_bytes // (1024 * 1024)} MB.",
+                )
+            buffer.write(chunk)
+
+
+def build_output_path() -> Path:
+    return OUTPUT_DIR / f"chatterbox_{uuid4().hex}.wav"
+
+
+def remove_file(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        logger.warning("Nao foi possivel remover arquivo temporario: %s", path)
+
+
+@app.middleware("http")
+async def add_request_logging(request: Request, call_next):
+    request_id = request.headers.get("X-Request-Id") or uuid4().hex[:12]
+    request.state.request_id = request_id
+    started = time.perf_counter()
+    response = None
+
+    try:
+        response = await call_next(request)
+        return response
+    finally:
+        elapsed_ms = round((time.perf_counter() - started) * 1000, 2)
+        status_code = response.status_code if response is not None else 500
+        logger.info(
+            "request_id=%s method=%s path=%s status=%s elapsed_ms=%s",
+            request_id,
+            request.method,
+            request.url.path,
+            status_code,
+            elapsed_ms,
+        )
+        if response is not None:
+            response.headers["X-Request-Id"] = request_id
+
+
 @app.get("/")
 def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
@@ -220,15 +321,22 @@ def config() -> JSONResponse:
             **runtime_info,
             "default_language": "en",
             "languages": languages,
+            "quality_modes": [
+                {"id": "ultra", "label": "Estabilidade alta"},
+                {"id": "max", "label": "Estabilidade equilibrada"},
+                {"id": "fast", "label": "Processamento direto"},
+            ],
+            "audio_prompt_max_mb": MAX_AUDIO_PROMPT_BYTES // (1024 * 1024),
         }
     )
 
 
 @app.post("/generate")
 async def generate_audio(
+    request: Request,
     text: str = Form(...),
     language_id: str = Form("en"),
-    quality_mode: str = Form("max"),
+    quality_mode: str = Form(DEFAULT_QUALITY_MODE),
     exaggeration: float = Form(0.5),
     cfg_weight: float = Form(0.5),
     temperature: float = Form(0.8),
@@ -238,23 +346,39 @@ async def generate_audio(
     if not text:
         raise HTTPException(status_code=400, detail="Texto vazio.")
 
+    quality_mode = validate_quality_mode(quality_mode)
+    validate_generation_controls(exaggeration, cfg_weight, temperature)
+    language_id = language_id.strip().lower() or "en"
+    prompt_suffix = validate_audio_prompt(audio_prompt)
     model, backend = resolve_generation_backend(language_id)
     temp_dir = Path(tempfile.mkdtemp(prefix="chatterbox_", dir=BASE_DIR))
     prompt_path: Path | None = None
+    output_path = build_output_path()
+    request_id = getattr(request.state, "request_id", "unknown")
 
     try:
-        if audio_prompt and audio_prompt.filename:
-            suffix = Path(audio_prompt.filename).suffix or ".wav"
-            prompt_path = temp_dir / f"prompt{suffix}"
-            with prompt_path.open("wb") as buffer:
-                shutil.copyfileobj(audio_prompt.file, buffer)
+        if audio_prompt and prompt_suffix:
+            prompt_path = temp_dir / f"prompt{prompt_suffix}"
+            save_upload_with_limit(audio_prompt, prompt_path)
 
         generate_kwargs = {
-            "audio_prompt_path": str(prompt_path) if prompt_path else None,
             "exaggeration": exaggeration,
             "cfg_weight": cfg_weight,
             "temperature": temperature,
         }
+        if prompt_path:
+            generate_kwargs["audio_prompt_path"] = str(prompt_path)
+
+        logger.info(
+            "request_id=%s action=generate_start chars=%s language=%s backend=%s quality_mode=%s device=%s audio_prompt=%s",
+            request_id,
+            len(text),
+            language_id,
+            backend,
+            quality_mode,
+            resolve_device(),
+            bool(prompt_path),
+        )
 
         if quality_mode == "ultra":
             wav = generate_chunked_audio(
@@ -274,7 +398,6 @@ async def generate_audio(
             else:
                 wav = model.generate(text, **generate_kwargs)
 
-        output_path = OUTPUT_DIR / "latest.wav"
         ta.save(str(output_path), wav.cpu(), model.sr)
 
         headers = {
@@ -283,15 +406,22 @@ async def generate_audio(
             "X-Backend": backend,
             "X-Device": resolve_device(),
             "X-Quality-Mode": quality_mode,
+            "X-Output-Filename": output_path.name,
+            "X-Request-Id": request_id,
         }
         return FileResponse(
             output_path,
             media_type="audio/wav",
-            filename="chatterbox.wav",
+            filename=output_path.name,
             headers=headers,
+            background=BackgroundTask(remove_file, output_path),
         )
+    except HTTPException:
+        remove_file(output_path)
+        raise
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Falha na geracao: {exc}") from exc
+        remove_file(output_path)
+        logger.exception("request_id=%s action=generate_failure", request_id)
+        raise HTTPException(status_code=500, detail="Falha interna na geracao do audio.") from exc
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
-

@@ -9,9 +9,7 @@
 <body>
   <main class="shell">
     <section class="panel hero">
-      <p class="eyebrow">Evo Chatterbox</p>
-      <h1>Gerar audio com voz local e GPU</h1>
-      <p class="intro">Selecione o idioma, acompanhe o tempo de geracao e veja quantos caracteres foram enviados para conversao.</p>
+      <h1>Evo Chatterbox</h1>
     </section>
 
     <section class="panel">
@@ -30,19 +28,19 @@
           </label>
 
           <label>
-            <span>Qualidade</span>
+            <span>Estabilidade</span>
             <select id="quality-mode" name="quality_mode">
-              <option value="ultra" selected>Ultra qualidade</option>
-              <option value="max">Qualidade maxima</option>
-              <option value="fast">Mais rapido</option>
+              <option value="ultra">Estabilidade alta</option>
+              <option value="max" selected>Estabilidade equilibrada</option>
+              <option value="fast">Processamento direto</option>
             </select>
-            <small id="quality-help" class="hint">Ultra qualidade divide o texto em trechos menores e adiciona pausas mais naturais.</small>
+            <small id="quality-help" class="hint">Estabilidade equilibrada divide o texto em trechos menores para melhorar estabilidade e naturalidade.</small>
           </label>
 
           <label>
             <span>Audio de referencia</span>
             <input type="file" name="audio_prompt" accept=".wav,.mp3,.flac,.m4a,.ogg">
-            <small class="hint">Opcional para aproximar o timbre.</small>
+            <small id="audio-prompt-help" class="hint">Opcional para aproximar o timbre. Ate 15 MB.</small>
           </label>
         </div>
 
