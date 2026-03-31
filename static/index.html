@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,72 +10,76 @@
   <main class="shell">
     <section class="panel hero">
       <h1>Evo Chatterbox</h1>
+      <div class="hero-links">
+        <a class="ghost-link" href="/docs" target="_blank" rel="noreferrer">API FastAPI</a>
+        <a class="ghost-link" href="/static/doc.html" target="_blank" rel="noreferrer">Documentation</a>
+      </div>
     </section>
 
     <section class="panel">
       <form id="tts-form" class="form">
         <div class="grid top-grid">
           <label>
-            <span>Idioma</span>
+            <span>Language</span>
             <select id="language" name="language_id"></select>
-            <small id="language-help" class="hint">Carregando idiomas...</small>
+            <small id="language-help" class="hint">Loading languages...</small>
           </label>
 
           <label>
-            <span>Emocao</span>
+            <span>Emotion</span>
             <select id="emotion" name="emotion_preset"></select>
-            <small id="emotion-help" class="hint">Preset de entonacao baseado nos controles nativos do modelo.</small>
+            <small id="emotion-help" class="hint">Intonation preset based on native model controls.</small>
           </label>
 
           <label>
-            <span>Estabilidade</span>
+            <span>Quality</span>
             <select id="quality-mode" name="quality_mode">
-              <option value="ultra">Estabilidade alta</option>
-              <option value="max" selected>Estabilidade equilibrada</option>
-              <option value="fast">Processamento direto</option>
+              <option value="ultra">High stability</option>
+              <option value="max" selected>Balanced stability</option>
+              <option value="fast">Direct processing</option>
             </select>
-            <small id="quality-help" class="hint">Estabilidade equilibrada divide o texto em trechos menores para melhorar estabilidade e naturalidade.</small>
+            <small id="quality-help" class="hint">Balanced stability splits text into smaller chunks for better stability and naturalness.</small>
           </label>
 
           <label>
-            <span>Audio de referencia</span>
+            <span>Reference audio</span>
             <input type="file" name="audio_prompt" accept=".wav,.mp3,.flac,.m4a,.ogg">
-            <small id="audio-prompt-help" class="hint">Opcional para aproximar o timbre. Ate 15 MB.</small>
+            <small id="audio-prompt-help" class="hint">Optional voice reference. Up to 15 MB.</small>
           </label>
         </div>
 
-        <section class="emotion-panel" aria-label="Presets de emocao">
+        <section class="emotion-panel" aria-label="Emotion presets">
           <div class="emotion-panel-header">
-            <strong>Atalhos de emocao</strong>
-            <button id="reset-emotion" class="ghost-button" type="button">Resetar emocao</button>
+            <strong>Emotion shortcuts</strong>
+            <button id="reset-emotion" class="ghost-button" type="button">Reset emotion</button>
           </div>
           <div id="emotion-chips" class="emotion-chips"></div>
         </section>
 
         <label>
           <div class="label-row">
-            <span>Texto</span>
-            <strong id="char-count">0 caracteres</strong>
+            <span>Text</span>
+            <strong id="char-count">0 characters</strong>
           </div>
-          <textarea id="text" name="text" rows="8" placeholder="Digite o texto para sintetizar..." required></textarea>
+          <textarea id="text" name="text" rows="8" placeholder="Type the text to synthesize..." required></textarea>
         </label>
 
         <div class="metrics">
           <div class="metric">
-            <span>Tempo atual</span>
+            <span>Elapsed time</span>
             <strong id="elapsed">00:00</strong>
           </div>
           <div class="metric">
-            <span>Ultima conversao</span>
-            <strong id="converted-count">0 caracteres</strong>
+            <span>Last conversion</span>
+            <strong id="converted-count">0 characters</strong>
           </div>
           <div class="metric">
             <span>Backend</span>
-            <strong id="backend-used">Aguardando</strong>
+            <strong id="backend-used">Waiting</strong>
           </div>
           <div class="metric">
-            <span>Dispositivo</span>
-            <strong id="device-used">Aguardando</strong>
+            <span>Device</span>
+            <strong id="device-used">Waiting</strong>
           </div>
         </div>
 
@@ -105,21 +109,24 @@
           </label>
         </div>
 
-        <button id="submit" type="submit">Gerar audio</button>
+        <button id="submit" type="submit">Generate audio</button>
       </form>
     </section>
 
     <section class="panel output">
       <div class="status-row">
         <strong>Status</strong>
-        <span id="status">Aguardando envio.</span>
+        <span id="status">Waiting for input.</span>
       </div>
 
       <audio id="player" controls></audio>
-      <a id="download" class="download hidden" download="chatterbox.wav">Baixar arquivo</a>
+      <a id="download" class="download hidden" download="chatterbox.wav">Download file</a>
     </section>
   </main>
 
   <script src="/static/app.js"></script>
 </body>
 </html>
+
+
+

@@ -1,18 +1,16 @@
-# API Evo Chatterbox
+# Evo Chatterbox API
 
-Esta API foi criada com `FastAPI`.
+REST API built with FastAPI for text-to-speech generation.
 
 ## Base URL
 
-Quando o servidor estiver rodando localmente:
+```
+http://127.0.0.1:8000
+```
 
-`http://127.0.0.1:8000`
+Start the server by running `start.bat`.
 
-Forma mais simples de iniciar no Windows:
-
-`INICIAR.bat`
-
-## Documentacao automatica
+## Auto-generated Documentation
 
 - Swagger UI: `http://127.0.0.1:8000/docs`
 - ReDoc: `http://127.0.0.1:8000/redoc`
@@ -21,13 +19,13 @@ Forma mais simples de iniciar no Windows:
 
 ### `GET /`
 
-Retorna a interface HTML do gerador de audio.
+Returns the web interface (HTML).
 
 ### `GET /health`
 
-Verifica se a API esta no ar.
+Health check endpoint.
 
-Exemplo de resposta:
+Response:
 
 ```json
 {
@@ -37,106 +35,88 @@ Exemplo de resposta:
 
 ### `GET /config`
 
-Retorna configuracao da aplicacao, dispositivo ativo, idiomas suportados e metadados da UI.
+Returns application configuration, active device, supported languages, and UI metadata.
 
-Exemplo:
+Response example:
 
 ```json
 {
   "device": "cuda",
+  "device_mode": "auto",
+  "cuda_available": true,
+  "gpu_name": "NVIDIA GeForce RTX 3070",
+  "cpu_name": "Intel64 Family 6",
   "default_language": "en",
-  "audio_prompt_max_mb": 15,
-  "quality_modes": [
-    {
-      "id": "ultra",
-      "label": "Estabilidade alta"
-    },
-    {
-      "id": "max",
-      "label": "Estabilidade equilibrada"
-    },
-    {
-      "id": "fast",
-      "label": "Processamento direto"
-    }
-  ],
   "languages": [
-    {
-      "id": "en",
-      "label": "English",
-      "backend": "standard"
-    },
-    {
-      "id": "pt",
-      "label": "Portuguese",
-      "backend": "multilingual"
-    }
-  ]
+    { "id": "en", "label": "English", "backend": "standard" },
+    { "id": "pt", "label": "Portuguese", "backend": "multilingual" }
+  ],
+  "quality_modes": [
+    { "id": "ultra", "label": "High stability" },
+    { "id": "max", "label": "Balanced stability" },
+    { "id": "fast", "label": "Direct processing" }
+  ],
+  "audio_prompt_max_mb": 15
 }
 ```
 
 ### `POST /generate`
 
-Gera um arquivo de audio `.wav` a partir de texto.
+Generates a `.wav` audio file from text.
 
-Tipo de envio:
+Content type: `multipart/form-data`
 
-`multipart/form-data`
+#### Parameters
 
-Campos:
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `text` | string | Yes | — | Text to convert to speech |
+| `language_id` | string | No | `en` | Language code (`en`, `pt`, `es`, `fr`, `de`, `ja`, etc.) |
+| `quality_mode` | string | No | `max` | Processing strategy: `ultra`, `max`, `fast` |
+| `exaggeration` | float | No | `0.5` | Expressive intensity (0.0 to 1.0) |
+| `cfg_weight` | float | No | `0.5` | Generation adherence control (0.0 to 1.0) |
+| `temperature` | float | No | `0.8` | Generation variation (0.1 to 2.0) |
+| `audio_prompt` | file | No | — | Optional voice reference file (`.wav`, `.mp3`, `.flac`, `.m4a`, `.ogg`, max 15 MB) |
 
-- `text`:
-  Texto a converter em voz.
-- `language_id`:
-  Idioma. Ex.: `en`, `pt`, `es`, `fr`, `de`, `ja`.
-- `quality_mode`:
-  Estrategia de processamento do texto.
-  Valores aceitos: `ultra`, `max`, `fast`.
-- `exaggeration`:
-  Intensidade expressiva. Intervalo aceito: `0.0` a `1.0`.
-- `cfg_weight`:
-  Controle de aderencia da geracao. Intervalo aceito: `0.0` a `1.0`.
-- `temperature`:
-  Variacao da geracao. Intervalo aceito: `0.1` a `2.0`.
-- `audio_prompt`:
-  Arquivo opcional de referencia de voz.
-  Formatos aceitos: `.wav`, `.mp3`, `.flac`, `.m4a`, `.ogg`.
-  Tamanho maximo: `15 MB`.
+#### Response
 
-Resposta:
+- `200 OK` — returns `audio/wav` file
+- `400 Bad Request` — invalid parameters
+- `413 Payload Too Large` — audio prompt exceeds size limit
 
-- `200 OK` com `audio/wav`
-- `400 Bad Request` para campos invalidos
-- `413 Payload Too Large` para `audio_prompt` acima do limite
+#### Response Headers
 
-Headers uteis:
+| Header | Description |
+|--------|-------------|
+| `X-Character-Count` | Number of characters processed |
+| `X-Language-Id` | Language used |
+| `X-Backend` | Backend used (`standard` or `multilingual`) |
+| `X-Device` | Device used (`cuda` or `cpu`) |
+| `X-Quality-Mode` | Quality mode applied |
+| `X-Output-Filename` | Generated filename |
+| `X-Request-Id` | Unique request identifier |
 
-- `X-Character-Count`
-- `X-Language-Id`
-- `X-Backend`
-- `X-Device`
-- `X-Quality-Mode`
-- `X-Output-Filename`
+## Examples
 
-## Exemplo com cURL
+### cURL
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/generate" ^
-  -F "text=Ola, este e um teste de voz." ^
-  -F "language_id=pt" ^
-  -F "quality_mode=max" ^
-  -F "exaggeration=0.5" ^
-  -F "cfg_weight=0.5" ^
-  -F "temperature=0.8" ^
+curl -X POST "http://127.0.0.1:8000/generate" \
+  -F "text=Hello, this is a voice test." \
+  -F "language_id=en" \
+  -F "quality_mode=max" \
+  -F "exaggeration=0.5" \
+  -F "cfg_weight=0.5" \
+  -F "temperature=0.8" \
   --output chatterbox.wav
 ```
 
-## Exemplo com PowerShell
+### PowerShell
 
 ```powershell
 $form = @{
-  text = "Ola, este e um teste de voz."
-  language_id = "pt"
+  text = "Hello, this is a voice test."
+  language_id = "en"
   quality_mode = "max"
   exaggeration = "0.5"
   cfg_weight = "0.5"
@@ -146,7 +126,7 @@ $form = @{
 Invoke-RestMethod -Uri "http://127.0.0.1:8000/generate" -Method Post -Form $form -OutFile "chatterbox.wav"
 ```
 
-## Exemplo com Python
+### Python
 
 ```python
 import requests
@@ -155,8 +135,8 @@ response = requests.post(
     "http://127.0.0.1:8000/generate",
     files={},
     data={
-        "text": "Ola, este e um teste de voz.",
-        "language_id": "pt",
+        "text": "Hello, this is a voice test.",
+        "language_id": "en",
         "quality_mode": "max",
         "exaggeration": "0.5",
         "cfg_weight": "0.5",
@@ -169,36 +149,40 @@ with open("chatterbox.wav", "wb") as f:
 
 print(response.headers.get("X-Backend"))
 print(response.headers.get("X-Device"))
-print(response.headers.get("X-Output-Filename"))
 ```
 
-## Observacoes
+### With Voice Reference
 
-- `en` usa o backend padrao.
-- Demais idiomas usam o backend `multilingual`.
-- O primeiro uso pode demorar por causa do carregamento dos modelos.
-- `quality_mode` melhora principalmente estabilidade em textos longos; nao troca o modelo.
-- Cada requisicao gera um arquivo temporario proprio no servidor para evitar conflito entre requisicoes simultaneas.
-- Se houver GPU NVIDIA disponivel, a API tenta usar `CUDA` automaticamente.
+```bash
+curl -X POST "http://127.0.0.1:8000/generate" \
+  -F "text=Clone this voice." \
+  -F "language_id=en" \
+  -F "quality_mode=max" \
+  -F "audio_prompt=@reference.wav" \
+  --output chatterbox.wav
+```
+
+## Notes
+
+- `en` (English) uses the standard backend; all other languages use the multilingual backend
+- First use of a backend may take longer due to model download and loading
+- `quality_mode` controls text chunking strategy — it does not change the model
+- Each request generates a unique temporary file to avoid conflicts between simultaneous requests
+- If an NVIDIA GPU is available, the API uses CUDA automatically
 
 ## Postman
 
-Existe uma colecao pronta em:
+A ready-to-use collection is available at [postman_collection.json](./postman_collection.json).
 
-[postman_collection.json](./postman_collection.json)
+Included requests:
+- Health
+- Config
+- Generate EN
+- Generate PT
+- Generate With Voice Prompt
 
-Ela inclui:
-
-- `Health`
-- `Config`
-- `Generate EN`
-- `Generate PT`
-- `Generate With Voice Prompt`
-
-Como importar:
-
-1. Abra o Postman.
-2. Clique em `Import`.
-3. Selecione o arquivo `postman_collection.json`.
-4. Ajuste a variavel `base_url` se necessario.
-5. Para teste com voz de referencia, preencha `reference_audio_path`.
+To import:
+1. Open Postman
+2. Click **Import**
+3. Select `postman_collection.json`
+4. Adjust the `base_url` variable if needed

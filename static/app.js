@@ -23,29 +23,29 @@ const qualityHelp = document.getElementById("quality-help");
 const audioPromptHelp = document.getElementById("audio-prompt-help");
 
 const emotionPresets = [
-  { id: "neutral", label: "Neutro", help: "Equilibrado para uso geral.", exaggeration: 0.5, cfg: 0.5, temperature: 0.8 },
-  { id: "calm", label: "Calmo", help: "Mais contido e suave.", exaggeration: 0.2, cfg: 0.55, temperature: 0.55 },
-  { id: "soft", label: "Suave", help: "Leve, macio e pouco enfatico.", exaggeration: 0.25, cfg: 0.5, temperature: 0.6 },
-  { id: "warm", label: "Acolhedor", help: "Timbre mais simpatico e proximo.", exaggeration: 0.35, cfg: 0.55, temperature: 0.75 },
-  { id: "happy", label: "Feliz", help: "Mais brilho e energia.", exaggeration: 0.7, cfg: 0.45, temperature: 1.0 },
-  { id: "excited", label: "Animado", help: "Mais dinamico e vibrante.", exaggeration: 0.85, cfg: 0.4, temperature: 1.15 },
-  { id: "energetic", label: "Energetico", help: "Impulso alto para chamadas e anuncios.", exaggeration: 0.95, cfg: 0.35, temperature: 1.2 },
-  { id: "dramatic", label: "Dramatico", help: "Mais contraste e intensidade.", exaggeration: 1.0, cfg: 0.65, temperature: 0.95 },
-  { id: "serious", label: "Serio", help: "Controlado e firme.", exaggeration: 0.4, cfg: 0.65, temperature: 0.65 },
-  { id: "authoritative", label: "Autoritario", help: "Mais comando e presenca.", exaggeration: 0.55, cfg: 0.7, temperature: 0.6 },
-  { id: "narrator", label: "Narrador", help: "Mais estavel para leitura.", exaggeration: 0.35, cfg: 0.7, temperature: 0.55 },
-  { id: "cinematic", label: "Cinematografico", help: "Mais teatral para trailers e spots.", exaggeration: 0.95, cfg: 0.6, temperature: 0.9 },
-  { id: "sad", label: "Triste", help: "Mais contido e arrastado.", exaggeration: 0.3, cfg: 0.6, temperature: 0.45 },
-  { id: "melancholic", label: "Melancolico", help: "Mais introspectivo.", exaggeration: 0.35, cfg: 0.65, temperature: 0.5 },
-  { id: "fearful", label: "Tenso", help: "Leve instabilidade e tensao.", exaggeration: 0.75, cfg: 0.5, temperature: 1.05 },
-  { id: "angry", label: "Bravo", help: "Mais enfase e ataque.", exaggeration: 0.9, cfg: 0.75, temperature: 0.85 },
-  { id: "whispery", label: "Sussurrado", help: "Tente combinar com audio de referencia.", exaggeration: 0.15, cfg: 0.45, temperature: 0.5 },
-  { id: "romantic", label: "Romantico", help: "Mais macio e caloroso.", exaggeration: 0.35, cfg: 0.5, temperature: 0.72 },
-  { id: "comic", label: "Comico", help: "Mais elasticidade na entrega.", exaggeration: 0.9, cfg: 0.4, temperature: 1.1 },
-  { id: "commercial", label: "Comercial", help: "Tom de locucao publicitaria.", exaggeration: 0.65, cfg: 0.55, temperature: 0.9 },
-  { id: "podcast", label: "Podcast", help: "Mais natural e confortavel para fala longa.", exaggeration: 0.3, cfg: 0.6, temperature: 0.7 },
-  { id: "urgent", label: "Urgente", help: "Mais pressao e ritmo.", exaggeration: 0.8, cfg: 0.7, temperature: 1.0 },
-  { id: "instructional", label: "Instrucional", help: "Claro e didatico.", exaggeration: 0.25, cfg: 0.75, temperature: 0.55 }
+  { id: "neutral", label: "Neutral", help: "Balanced for general use.", exaggeration: 0.5, cfg: 0.5, temperature: 0.8 },
+  { id: "calm", label: "Calm", help: "More contained and soft.", exaggeration: 0.2, cfg: 0.55, temperature: 0.55 },
+  { id: "soft", label: "Soft", help: "Light, smooth and subtle.", exaggeration: 0.25, cfg: 0.5, temperature: 0.6 },
+  { id: "warm", label: "Warm", help: "Friendly and approachable tone.", exaggeration: 0.35, cfg: 0.55, temperature: 0.75 },
+  { id: "happy", label: "Happy", help: "More brightness and energy.", exaggeration: 0.7, cfg: 0.45, temperature: 1.0 },
+  { id: "excited", label: "Excited", help: "More dynamic and vibrant.", exaggeration: 0.85, cfg: 0.4, temperature: 1.15 },
+  { id: "energetic", label: "Energetic", help: "High impulse for calls and announcements.", exaggeration: 0.95, cfg: 0.35, temperature: 1.2 },
+  { id: "dramatic", label: "Dramatic", help: "More contrast and intensity.", exaggeration: 1.0, cfg: 0.65, temperature: 0.95 },
+  { id: "serious", label: "Serious", help: "Controlled and firm.", exaggeration: 0.4, cfg: 0.65, temperature: 0.65 },
+  { id: "authoritative", label: "Authoritative", help: "More command and presence.", exaggeration: 0.55, cfg: 0.7, temperature: 0.6 },
+  { id: "narrator", label: "Narrator", help: "More stable for reading.", exaggeration: 0.35, cfg: 0.7, temperature: 0.55 },
+  { id: "cinematic", label: "Cinematic", help: "Theatrical style for trailers and spots.", exaggeration: 0.95, cfg: 0.6, temperature: 0.9 },
+  { id: "sad", label: "Sad", help: "More contained and dragged.", exaggeration: 0.3, cfg: 0.6, temperature: 0.45 },
+  { id: "melancholic", label: "Melancholic", help: "More introspective.", exaggeration: 0.35, cfg: 0.65, temperature: 0.5 },
+  { id: "fearful", label: "Tense", help: "Slight instability and tension.", exaggeration: 0.75, cfg: 0.5, temperature: 1.05 },
+  { id: "angry", label: "Angry", help: "More emphasis and attack.", exaggeration: 0.9, cfg: 0.75, temperature: 0.85 },
+  { id: "whispery", label: "Whisper", help: "Try combining with a reference audio.", exaggeration: 0.15, cfg: 0.45, temperature: 0.5 },
+  { id: "romantic", label: "Romantic", help: "Softer and warmer.", exaggeration: 0.35, cfg: 0.5, temperature: 0.72 },
+  { id: "comic", label: "Comic", help: "More elasticity in delivery.", exaggeration: 0.9, cfg: 0.4, temperature: 1.1 },
+  { id: "commercial", label: "Commercial", help: "Advertising voiceover tone.", exaggeration: 0.65, cfg: 0.55, temperature: 0.9 },
+  { id: "podcast", label: "Podcast", help: "Natural and comfortable for long speech.", exaggeration: 0.3, cfg: 0.6, temperature: 0.7 },
+  { id: "urgent", label: "Urgent", help: "More pressure and pace.", exaggeration: 0.8, cfg: 0.7, temperature: 1.0 },
+  { id: "instructional", label: "Instructional", help: "Clear and didactic.", exaggeration: 0.25, cfg: 0.75, temperature: 0.55 }
 ];
 
 const qualityPresets = {
@@ -55,9 +55,9 @@ const qualityPresets = {
 };
 
 const qualityHelpByMode = {
-  ultra: "Estabilidade alta divide o texto em trechos menores e adiciona pausas mais naturais. Melhor para portugues e textos maiores.",
-  max: "Estabilidade equilibrada divide o texto em trechos menores para melhorar estabilidade e naturalidade.",
-  fast: "Processamento direto gera o texto inteiro de uma vez. Pode perder estabilidade em textos longos."
+  ultra: "High stability splits text into smaller chunks with more natural pauses. Best for non-English languages and longer texts.",
+  max: "Balanced stability splits text into smaller chunks for better stability and naturalness.",
+  fast: "Direct processing generates the entire text at once. May lose stability on long texts."
 };
 
 let timerId = null;
@@ -172,22 +172,22 @@ function resetEmotionPreset() {
 function updateEmotionHelp() {
   const preset = emotionPresets.find((item) => item.id === emotionSelect.value);
   if (!preset) {
-    emotionHelp.textContent = "Preset de entonacao baseado nos controles nativos do modelo.";
+    emotionHelp.textContent = "Intonation preset based on native model controls.";
     return;
   }
 
-  const suffix = manualSliderOverride ? " Controles manuais preservados." : "";
+  const suffix = manualSliderOverride ? " Manual controls preserved." : "";
   emotionHelp.textContent = `${preset.help} Exaggeration ${preset.exaggeration.toFixed(2)}, CFG ${preset.cfg.toFixed(2)}, Temperature ${preset.temperature.toFixed(2)}.${suffix}`;
 }
 
 function updateQualityHelp() {
   const baseHelp = qualityHelpByMode[qualityMode.value] || qualityHelpByMode.max;
-  qualityHelp.textContent = manualSliderOverride ? `${baseHelp} Controles manuais preservados.` : baseHelp;
+  qualityHelp.textContent = manualSliderOverride ? `${baseHelp} Manual controls preserved.` : baseHelp;
 }
 
 function updateCharCount() {
   const count = textField.value.length;
-  charCount.textContent = `${count} caracteres`;
+  charCount.textContent = `${count} characters`;
 }
 
 function startTimer() {
@@ -230,7 +230,14 @@ function renderQualityModes(modes) {
 async function loadConfig() {
   try {
     const response = await fetch("/config");
+    if (!response.ok) {
+      throw new Error("Failed to load configuration.");
+    }
+
     const config = await response.json();
+    if (!Array.isArray(config.languages) || config.languages.length === 0) {
+      throw new Error("No languages returned by the server.");
+    }
 
     languageSelect.innerHTML = "";
     for (const language of config.languages) {
@@ -238,6 +245,8 @@ async function loadConfig() {
       option.value = language.id;
       option.textContent = `${language.label} (${language.id})`;
       option.dataset.backend = language.backend;
+      option.dataset.modelLanguage = language.model_language_id || language.id;
+      option.dataset.help = language.help || "";
       if (language.id === config.default_language) {
         option.selected = true;
       }
@@ -246,14 +255,15 @@ async function loadConfig() {
 
     renderQualityModes(config.quality_modes);
     if (typeof config.audio_prompt_max_mb === "number") {
-      audioPromptHelp.textContent = `Opcional para aproximar o timbre. Ate ${config.audio_prompt_max_mb} MB.`;
+      audioPromptHelp.textContent = `Optional voice reference. Up to ${config.audio_prompt_max_mb} MB.`;
     }
 
-    deviceUsed.textContent = config.device.toUpperCase();
+    deviceUsed.textContent = typeof config.device === "string" ? config.device.toUpperCase() : "UNKNOWN";
     updateLanguageHelp();
     updateQualityHelp();
   } catch (error) {
-    languageHelp.textContent = "Nao foi possivel carregar os idiomas.";
+    languageHelp.textContent = error.message || "Could not load languages.";
+    deviceUsed.textContent = "UNKNOWN";
   }
 }
 
@@ -263,11 +273,19 @@ function updateLanguageHelp() {
     return;
   }
 
+  if (selectedOption.dataset.help) {
+    languageHelp.textContent = selectedOption.dataset.help;
+    return;
+  }
+
   const backend = selectedOption.dataset.backend;
+  const modelLanguage = selectedOption.dataset.modelLanguage || selectedOption.value;
   if (backend === "standard") {
-    languageHelp.textContent = "English usa o modelo padrao, normalmente mais leve e mais rapido.";
+    languageHelp.textContent = "English uses the standard model, usually lighter and faster.";
+  } else if (modelLanguage !== selectedOption.value) {
+    languageHelp.textContent = `This option maps to the ${modelLanguage.toUpperCase()} multilingual model. Accent fallback without reference audio still depends on the base model voice.`;
   } else {
-    languageHelp.textContent = "Outros idiomas usam o modelo multilingual. No primeiro uso desse idioma, o carregamento pode demorar mais.";
+    languageHelp.textContent = "Other languages use the multilingual model. First use of a language may take longer to load.";
   }
 }
 
@@ -304,8 +322,8 @@ form.addEventListener("submit", async (event) => {
 
   submitButton.disabled = true;
   downloadLink.classList.add("hidden");
-  backendUsed.textContent = "Processando";
-  statusLabel.textContent = "Gerando audio. O primeiro carregamento de um backend pode demorar.";
+  backendUsed.textContent = "Processing";
+  statusLabel.textContent = "Generating audio. First backend load may take a while.";
   startTimer();
 
   try {
@@ -317,8 +335,8 @@ form.addEventListener("submit", async (event) => {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: "Erro inesperado." }));
-      throw new Error(error.detail || "Falha ao gerar audio.");
+      const error = await response.json().catch(() => ({ detail: "Unexpected error." }));
+      throw new Error(error.detail || "Failed to generate audio.");
     }
 
     const blob = await response.blob();
@@ -328,15 +346,15 @@ form.addEventListener("submit", async (event) => {
     downloadLink.href = currentAudioUrl;
     downloadLink.download = response.headers.get("X-Output-Filename") || "chatterbox.wav";
     downloadLink.classList.remove("hidden");
-    convertedCount.textContent = `${response.headers.get("X-Character-Count") || textField.value.length} caracteres`;
-    backendUsed.textContent = response.headers.get("X-Backend") || "desconhecido";
-    deviceUsed.textContent = (response.headers.get("X-Device") || "desconhecido").toUpperCase();
+    convertedCount.textContent = `${response.headers.get("X-Character-Count") || textField.value.length} characters`;
+    backendUsed.textContent = response.headers.get("X-Backend") || "unknown";
+    deviceUsed.textContent = (response.headers.get("X-Device") || "unknown").toUpperCase();
     const returnedQuality = response.headers.get("X-Quality-Mode");
     if (returnedQuality) {
       qualityMode.value = returnedQuality;
       updateQualityHelp();
     }
-    statusLabel.textContent = `Audio gerado com sucesso em ${elapsedLabel.textContent}.`;
+    statusLabel.textContent = `Audio generated successfully in ${elapsedLabel.textContent}.`;
   } catch (error) {
     statusLabel.textContent = error.message;
   } finally {
@@ -344,3 +362,5 @@ form.addEventListener("submit", async (event) => {
     submitButton.disabled = false;
   }
 });
+
+

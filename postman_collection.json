@@ -3,7 +3,7 @@
     "_postman_id": "8f4b7138-7c2a-4d48-b6cc-audio-chatterbox",
     "name": "Evo Chatterbox Local",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Colecao Postman para testar a API local do Evo Chatterbox."
+    "description": "Postman collection for testing the Evo Chatterbox local API."
   },
   "variable": [
     {
@@ -38,7 +38,7 @@
             "health"
           ]
         },
-        "description": "Verifica se a API esta no ar."
+        "description": "Check if the API is running."
       }
     },
     {
@@ -55,7 +55,7 @@
             "config"
           ]
         },
-        "description": "Retorna dispositivo ativo e idiomas suportados."
+        "description": "Returns active device and supported languages."
       }
     },
     {
@@ -102,7 +102,7 @@
             "generate"
           ]
         },
-        "description": "Gera audio em ingles com o backend padrao."
+        "description": "Generate audio in English using the standard backend."
       }
     },
     {
@@ -149,7 +149,7 @@
             "generate"
           ]
         },
-        "description": "Gera audio em portugues com o backend multilingual."
+        "description": "Generate audio in Portuguese using the multilingual backend."
       }
     },
     {
@@ -201,7 +201,7 @@
             "generate"
           ]
         },
-        "description": "Gera audio usando um arquivo de referencia de voz. Defina a variavel reference_audio_path no Postman."
+        "description": "Generate audio using a voice reference file. Set the reference_audio_path variable in Postman."
       }
     }
   ]

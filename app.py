@@ -56,7 +56,29 @@ ULTRA_CHUNK_CHARS = 140
 CHUNK_SILENCE_MS = 140
 ULTRA_CHUNK_SILENCE_MS = 220
 DEFAULT_QUALITY_MODE = "max"
-VALID_QUALITY_MODES = {"ultra", "max", "fast"}
+QUALITY_MODE_OPTIONS = [
+    {"id": "ultra", "label": "High stability"},
+    {"id": "max", "label": "Balanced stability"},
+    {"id": "fast", "label": "Direct processing"},
+]
+VALID_QUALITY_MODES = {mode["id"] for mode in QUALITY_MODE_OPTIONS}
+LANGUAGE_VARIANTS = [
+    {
+        "id": "pt-br",
+        "label": "Portuguese (Brazil)",
+        "backend": "multilingual",
+        "model_language_id": "pt",
+        "help": "Uses the multilingual Portuguese model with a Brazilian Portuguese label. Without reference audio, accent fallback still depends on the base model voice.",
+    },
+    {
+        "id": "pt-pt",
+        "label": "Portuguese (Portugal)",
+        "backend": "multilingual",
+        "model_language_id": "pt",
+        "help": "Uses the multilingual Portuguese model with a Portugal Portuguese label. Without reference audio, accent fallback still depends on the base model voice.",
+    },
+]
+LANGUAGE_ALIASES = {variant["id"]: variant["model_language_id"] for variant in LANGUAGE_VARIANTS}
 ALLOWED_AUDIO_PROMPT_EXTENSIONS = {".wav", ".mp3", ".flac", ".m4a", ".ogg"}
 MAX_AUDIO_PROMPT_BYTES = 15 * 1024 * 1024
 MAX_EXAGGERATION = 1.0
@@ -202,14 +224,20 @@ def get_multilingual_model() -> ChatterboxMultilingualTTS:
     return _multilingual_model
 
 
-def resolve_generation_backend(language_id: str) -> tuple[object, str]:
-    language_id = language_id.strip().lower() or "en"
+def normalize_language_id(language_id: str) -> tuple[str, str]:
+    requested_language_id = language_id.strip().lower() or "en"
+    model_language_id = LANGUAGE_ALIASES.get(requested_language_id, requested_language_id)
+    return requested_language_id, model_language_id
 
-    if language_id == "en":
+
+def resolve_generation_backend(language_id: str) -> tuple[object, str]:
+    _, model_language_id = normalize_language_id(language_id)
+
+    if model_language_id == "en":
         return get_tts_model(), "standard"
 
-    if language_id not in SUPPORTED_LANGUAGES:
-        raise HTTPException(status_code=400, detail="Idioma nao suportado.")
+    if model_language_id not in SUPPORTED_LANGUAGES:
+        raise HTTPException(status_code=400, detail="Unsupported language.")
 
     return get_multilingual_model(), "multilingual"
 
@@ -218,17 +246,17 @@ def validate_quality_mode(quality_mode: str) -> str:
     normalized_mode = quality_mode.strip().lower() or DEFAULT_QUALITY_MODE
     if normalized_mode not in VALID_QUALITY_MODES:
         allowed_modes = ", ".join(sorted(VALID_QUALITY_MODES))
-        raise HTTPException(status_code=400, detail=f"Modo de estabilidade invalido. Use: {allowed_modes}.")
+        raise HTTPException(status_code=400, detail=f"Invalid quality mode. Use: {allowed_modes}.")
     return normalized_mode
 
 
 def validate_generation_controls(exaggeration: float, cfg_weight: float, temperature: float) -> None:
     if not 0.0 <= exaggeration <= MAX_EXAGGERATION:
-        raise HTTPException(status_code=400, detail="Exaggeration deve ficar entre 0.0 e 1.0.")
+        raise HTTPException(status_code=400, detail="Exaggeration must be between 0.0 and 1.0.")
     if not 0.0 <= cfg_weight <= MAX_CFG_WEIGHT:
-        raise HTTPException(status_code=400, detail="CFG Weight deve ficar entre 0.0 e 1.0.")
+        raise HTTPException(status_code=400, detail="CFG Weight must be between 0.0 and 1.0.")
     if not MIN_TEMPERATURE <= temperature <= MAX_TEMPERATURE:
-        raise HTTPException(status_code=400, detail="Temperature deve ficar entre 0.1 e 2.0.")
+        raise HTTPException(status_code=400, detail="Temperature must be between 0.1 and 2.0.")
 
 
 def validate_audio_prompt(audio_prompt: UploadFile | None) -> str | None:
@@ -240,7 +268,7 @@ def validate_audio_prompt(audio_prompt: UploadFile | None) -> str | None:
         allowed_extensions = ", ".join(sorted(ALLOWED_AUDIO_PROMPT_EXTENSIONS))
         raise HTTPException(
             status_code=400,
-            detail=f"Audio de referencia invalido. Use um destes formatos: {allowed_extensions}.",
+            detail=f"Invalid audio format. Supported formats: {allowed_extensions}.",
         )
     return suffix
 
@@ -256,7 +284,7 @@ def save_upload_with_limit(upload: UploadFile, destination: Path, max_bytes: int
             if written_bytes > max_bytes:
                 raise HTTPException(
                     status_code=413,
-                    detail=f"Audio de referencia excede o limite de {max_bytes // (1024 * 1024)} MB.",
+                    detail=f"Audio prompt exceeds the {max_bytes // (1024 * 1024)} MB limit.",
                 )
             buffer.write(chunk)
 
@@ -269,7 +297,7 @@ def remove_file(path: Path) -> None:
     try:
         path.unlink(missing_ok=True)
     except OSError:
-        logger.warning("Nao foi possivel remover arquivo temporario: %s", path)
+        logger.warning("Could not remove temporary file: %s", path)
 
 
 @app.middleware("http")
@@ -302,30 +330,36 @@ def index() -> FileResponse:
     return FileResponse(STATIC_DIR / "index.html")
 
 
+@app.get("/api-docs")
+def api_docs() -> FileResponse:
+    return FileResponse(STATIC_DIR / "doc.html")
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def build_language_options() -> list[dict[str, str]]:
+    languages = [{"id": "en", "label": "English", "backend": "standard"}]
+    for language_id, label in sorted(SUPPORTED_LANGUAGES.items()):
+        if language_id == "en":
+            continue
+        languages.append({"id": language_id, "label": label, "backend": "multilingual"})
+        if language_id == "pt":
+            languages.extend(LANGUAGE_VARIANTS)
+    return languages
+
+
 @app.get("/config")
 def config() -> JSONResponse:
-    languages = [{"id": "en", "label": "English", "backend": "standard"}]
-    languages.extend(
-        {"id": language_id, "label": label, "backend": "multilingual"}
-        for language_id, label in sorted(SUPPORTED_LANGUAGES.items())
-        if language_id != "en"
-    )
     runtime_info = get_runtime_info()
     return JSONResponse(
         {
             **runtime_info,
             "default_language": "en",
-            "languages": languages,
-            "quality_modes": [
-                {"id": "ultra", "label": "Estabilidade alta"},
-                {"id": "max", "label": "Estabilidade equilibrada"},
-                {"id": "fast", "label": "Processamento direto"},
-            ],
+            "languages": build_language_options(),
+            "quality_modes": QUALITY_MODE_OPTIONS,
             "audio_prompt_max_mb": MAX_AUDIO_PROMPT_BYTES // (1024 * 1024),
         }
     )
@@ -344,13 +378,13 @@ async def generate_audio(
 ) -> FileResponse:
     text = normalize_text(text)
     if not text:
-        raise HTTPException(status_code=400, detail="Texto vazio.")
+        raise HTTPException(status_code=400, detail="Text is empty.")
 
     quality_mode = validate_quality_mode(quality_mode)
     validate_generation_controls(exaggeration, cfg_weight, temperature)
-    language_id = language_id.strip().lower() or "en"
+    requested_language_id, model_language_id = normalize_language_id(language_id)
     prompt_suffix = validate_audio_prompt(audio_prompt)
-    model, backend = resolve_generation_backend(language_id)
+    model, backend = resolve_generation_backend(requested_language_id)
     temp_dir = Path(tempfile.mkdtemp(prefix="chatterbox_", dir=BASE_DIR))
     prompt_path: Path | None = None
     output_path = build_output_path()
@@ -370,10 +404,11 @@ async def generate_audio(
             generate_kwargs["audio_prompt_path"] = str(prompt_path)
 
         logger.info(
-            "request_id=%s action=generate_start chars=%s language=%s backend=%s quality_mode=%s device=%s audio_prompt=%s",
+            "request_id=%s action=generate_start chars=%s language=%s model_language=%s backend=%s quality_mode=%s device=%s audio_prompt=%s",
             request_id,
             len(text),
-            language_id,
+            requested_language_id,
+            model_language_id,
             backend,
             quality_mode,
             resolve_device(),
@@ -385,16 +420,16 @@ async def generate_audio(
                 model,
                 backend,
                 text,
-                language_id,
+                model_language_id,
                 generate_kwargs,
                 max_chunk_chars=ULTRA_CHUNK_CHARS,
                 silence_ms=ULTRA_CHUNK_SILENCE_MS,
             )
         elif quality_mode == "max":
-            wav = generate_chunked_audio(model, backend, text, language_id, generate_kwargs)
+            wav = generate_chunked_audio(model, backend, text, model_language_id, generate_kwargs)
         else:
             if backend == "multilingual":
-                wav = model.generate(text, language_id=language_id, **generate_kwargs)
+                wav = model.generate(text, language_id=model_language_id, **generate_kwargs)
             else:
                 wav = model.generate(text, **generate_kwargs)
 
@@ -402,7 +437,8 @@ async def generate_audio(
 
         headers = {
             "X-Character-Count": str(len(text)),
-            "X-Language-Id": language_id,
+            "X-Language-Id": requested_language_id,
+            "X-Model-Language-Id": model_language_id,
             "X-Backend": backend,
             "X-Device": resolve_device(),
             "X-Quality-Mode": quality_mode,
@@ -422,6 +458,10 @@ async def generate_audio(
     except Exception as exc:
         remove_file(output_path)
         logger.exception("request_id=%s action=generate_failure", request_id)
-        raise HTTPException(status_code=500, detail="Falha interna na geracao do audio.") from exc
+        raise HTTPException(status_code=500, detail="Internal error during audio generation.") from exc
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+
+

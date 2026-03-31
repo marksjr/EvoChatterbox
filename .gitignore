@@ -7,3 +7,6 @@ uvicorn.out.log
 uvicorn.err.log
 dxdiag.txt
 .cuda_check.tmp
+.installed
+.agent/
+.claude/

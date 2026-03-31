@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Evo Chatterbox Documentation</title>
+  <style>
+    :root {
+      --bg: #081018;
+      --bg-2: #0f1b2a;
+      --panel: rgba(12, 20, 31, 0.9);
+      --panel-strong: rgba(18, 29, 43, 0.96);
+      --ink: #e8edf3;
+      --muted: #95a3b8;
+      --accent: #59c3c3;
+      --accent-2: #7c4dff;
+      --accent-3: #ff8a5b;
+      --border: rgba(137, 167, 198, 0.18);
+      --shadow: 0 28px 80px rgba(0, 0, 0, 0.42);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(124, 77, 255, 0.18), transparent 26%),
+        radial-gradient(circle at top right, rgba(89, 195, 195, 0.14), transparent 22%),
+        radial-gradient(circle at bottom center, rgba(255, 138, 91, 0.12), transparent 28%),
+        linear-gradient(145deg, var(--bg), var(--bg-2) 54%, #050a11);
+    }
+
+    .shell {
+      width: max(90%, calc(100% - 32px));
+      max-width: 1440px;
+      margin: 32px auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      background: linear-gradient(180deg, rgba(18, 29, 43, 0.92), rgba(10, 17, 28, 0.92));
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2.2rem, 5vw, 4.4rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 1.35rem;
+    }
+
+    h3 {
+      margin: 22px 0 10px;
+      font-size: 1rem;
+    }
+
+    p, li { color: var(--ink); line-height: 1.6; }
+    .muted { color: var(--muted); }
+    .lead { color: var(--muted); max-width: 900px; }
+
+    .top-links, .quick-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    a.link-btn {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 10px 16px;
+      color: var(--ink);
+      text-decoration: none;
+      background: rgba(255, 255, 255, 0.04);
+      transition: transform 160ms ease, opacity 160ms ease, box-shadow 160ms ease;
+    }
+
+    a.link-btn:hover { transform: translateY(-1px); }
+
+    .grid {
+      display: grid;
+      gap: 16px;
+    }
+
+    .two-col {
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th { color: var(--muted); font-weight: 600; }
+
+    code, pre {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    pre {
+      margin: 12px 0 0;
+      padding: 16px;
+      border-radius: 16px;
+      overflow-x: auto;
+      background: rgba(0, 0, 0, 0.28);
+      border: 1px solid var(--border);
+      color: #dff7ff;
+    }
+
+    ul {
+      margin: 10px 0 0;
+      padding-left: 18px;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--ink);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.92rem;
+    }
+
+    .footer-note {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 640px) {
+      .panel { padding: 18px; border-radius: 20px; }
+      th, td { font-size: 0.9rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="panel">
+      <h1>Evo Chatterbox Docs</h1>
+      <p class="lead">Complete English documentation for the Evo Chatterbox web app and FastAPI backend, including setup, UI controls, API usage, supported languages, generation options, response headers, and example requests.</p>
+      <div class="top-links">
+        <a class="link-btn" href="/" target="_blank" rel="noreferrer">Open Web App</a>
+        <a class="link-btn" href="/docs" target="_blank" rel="noreferrer">Open FastAPI Swagger</a>
+        <a class="link-btn" href="/redoc" target="_blank" rel="noreferrer">Open ReDoc</a>
+      </div>
+    </section>
+
+    <section class="panel grid two-col">
+      <div class="card">
+        <h2>System Overview</h2>
+        <ul>
+          <li>Local text-to-speech application with a web interface and FastAPI backend.</li>
+          <li>English uses the standard backend. All other supported languages use the multilingual backend.</li>
+          <li>Optional reference audio can be uploaded to approximate a target voice timbre.</li>
+          <li>CUDA is used automatically when an NVIDIA GPU is available; otherwise the system falls back to CPU.</li>
+          <li>Generated audio is returned as a WAV file.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h2>Base URLs</h2>
+        <table>
+          <tr><th>URL</th><th>Purpose</th></tr>
+          <tr><td><code>http://127.0.0.1:8000/</code></td><td>Main web interface</td></tr>
+          <tr><td><code>http://127.0.0.1:8000/docs</code></td><td>Interactive Swagger UI</td></tr>
+          <tr><td><code>http://127.0.0.1:8000/redoc</code></td><td>Alternative API documentation</td></tr>
+          <tr><td><code>http://127.0.0.1:8000/static/doc.html</code></td><td>This documentation page</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Supported Languages</h2>
+      <p class="muted">Current backend support includes 23 native model language codes plus guided Portuguese aliases for Brazil and Portugal. English is handled by the standard model; all others use the multilingual model.</p>
+      <table>
+        <tr><th>Code</th><th>Language</th><th>Backend</th></tr>
+        <tr><td><code>ar</code></td><td>Arabic</td><td>Multilingual</td></tr>
+        <tr><td><code>da</code></td><td>Danish</td><td>Multilingual</td></tr>
+        <tr><td><code>de</code></td><td>German</td><td>Multilingual</td></tr>
+        <tr><td><code>el</code></td><td>Greek</td><td>Multilingual</td></tr>
+        <tr><td><code>en</code></td><td>English</td><td>Standard</td></tr>
+        <tr><td><code>es</code></td><td>Spanish</td><td>Multilingual</td></tr>
+        <tr><td><code>fi</code></td><td>Finnish</td><td>Multilingual</td></tr>
+        <tr><td><code>fr</code></td><td>French</td><td>Multilingual</td></tr>
+        <tr><td><code>he</code></td><td>Hebrew</td><td>Multilingual</td></tr>
+        <tr><td><code>hi</code></td><td>Hindi</td><td>Multilingual</td></tr>
+        <tr><td><code>it</code></td><td>Italian</td><td>Multilingual</td></tr>
+        <tr><td><code>ja</code></td><td>Japanese</td><td>Multilingual</td></tr>
+        <tr><td><code>ko</code></td><td>Korean</td><td>Multilingual</td></tr>
+        <tr><td><code>ms</code></td><td>Malay</td><td>Multilingual</td></tr>
+        <tr><td><code>nl</code></td><td>Dutch</td><td>Multilingual</td></tr>
+        <tr><td><code>no</code></td><td>Norwegian</td><td>Multilingual</td></tr>
+        <tr><td><code>pl</code></td><td>Polish</td><td>Multilingual</td></tr>
+        <tr><td><code>pt</code></td><td>Portuguese</td><td>Multilingual</td></tr>
+        <tr><td><code>pt-BR</code></td><td>Portuguese (Brazil)</td><td>Alias to multilingual <code>pt</code></td></tr>
+        <tr><td><code>pt-PT</code></td><td>Portuguese (Portugal)</td><td>Alias to multilingual <code>pt</code></td></tr>
+        <tr><td><code>ru</code></td><td>Russian</td><td>Multilingual</td></tr>
+        <tr><td><code>sv</code></td><td>Swedish</td><td>Multilingual</td></tr>
+        <tr><td><code>sw</code></td><td>Swahili</td><td>Multilingual</td></tr>
+        <tr><td><code>tr</code></td><td>Turkish</td><td>Multilingual</td></tr>
+        <tr><td><code>zh</code></td><td>Chinese</td><td>Multilingual</td></tr>
+      </table>
+      <p class="footer-note">Note: <code>pt-BR</code> and <code>pt-PT</code> are guided aliases that map to the same multilingual <code>pt</code> model. They improve API and UI clarity, but they do not create separate native accent models by themselves.</p>
+    </section>
+
+    <section class="panel grid two-col">
+      <div class="card">
+        <h2>UI Controls</h2>
+        <table>
+          <tr><th>Control</th><th>Description</th></tr>
+          <tr><td>Language</td><td>Selects the language code sent to the backend.</td></tr>
+          <tr><td>Emotion</td><td>Applies a preset combination of Exaggeration, CFG Weight, and Temperature.</td></tr>
+          <tr><td>Quality</td><td>Controls chunking strategy and pacing behavior.</td></tr>
+          <tr><td>Reference Audio</td><td>Optional upload used as a voice prompt for timbre matching.</td></tr>
+          <tr><td>Text</td><td>Input text to synthesize.</td></tr>
+          <tr><td>Exaggeration</td><td>Expressive intensity from <code>0.0</code> to <code>1.0</code>.</td></tr>
+          <tr><td>CFG Weight</td><td>Generation adherence from <code>0.0</code> to <code>1.0</code>.</td></tr>
+          <tr><td>Temperature</td><td>Variation from <code>0.1</code> to <code>2.0</code>.</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h2>Quality Modes</h2>
+        <table>
+          <tr><th>ID</th><th>Label</th><th>Behavior</th></tr>
+          <tr><td><code>ultra</code></td><td>High stability</td><td>Splits text into smaller chunks with longer pauses. Best for non-English languages and long text.</td></tr>
+          <tr><td><code>max</code></td><td>Balanced stability</td><td>Default mode. Splits text into chunks for a balance between stability and naturalness.</td></tr>
+          <tr><td><code>fast</code></td><td>Direct processing</td><td>Generates the full text in one pass. Fastest, but less stable on longer text.</td></tr>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Emotion Presets</h2>
+      <p class="muted">The frontend currently exposes 23 emotion presets. Each preset sets three generation controls automatically.</p>
+      <table>
+        <tr><th>ID</th><th>Label</th><th>Exaggeration</th><th>CFG</th><th>Temperature</th><th>Description</th></tr>
+        <tr><td><code>neutral</code></td><td>Neutral</td><td>0.50</td><td>0.50</td><td>0.80</td><td>Balanced for general use.</td></tr>
+        <tr><td><code>calm</code></td><td>Calm</td><td>0.20</td><td>0.55</td><td>0.55</td><td>More contained and soft.</td></tr>
+        <tr><td><code>soft</code></td><td>Soft</td><td>0.25</td><td>0.50</td><td>0.60</td><td>Light, smooth and subtle.</td></tr>
+        <tr><td><code>warm</code></td><td>Warm</td><td>0.35</td><td>0.55</td><td>0.75</td><td>Friendly and approachable tone.</td></tr>
+        <tr><td><code>happy</code></td><td>Happy</td><td>0.70</td><td>0.45</td><td>1.00</td><td>More brightness and energy.</td></tr>
+        <tr><td><code>excited</code></td><td>Excited</td><td>0.85</td><td>0.40</td><td>1.15</td><td>More dynamic and vibrant.</td></tr>
+        <tr><td><code>energetic</code></td><td>Energetic</td><td>0.95</td><td>0.35</td><td>1.20</td><td>High impulse for calls and announcements.</td></tr>
+        <tr><td><code>dramatic</code></td><td>Dramatic</td><td>1.00</td><td>0.65</td><td>0.95</td><td>More contrast and intensity.</td></tr>
+        <tr><td><code>serious</code></td><td>Serious</td><td>0.40</td><td>0.65</td><td>0.65</td><td>Controlled and firm.</td></tr>
+        <tr><td><code>authoritative</code></td><td>Authoritative</td><td>0.55</td><td>0.70</td><td>0.60</td><td>More command and presence.</td></tr>
+        <tr><td><code>narrator</code></td><td>Narrator</td><td>0.35</td><td>0.70</td><td>0.55</td><td>More stable for reading.</td></tr>
+        <tr><td><code>cinematic</code></td><td>Cinematic</td><td>0.95</td><td>0.60</td><td>0.90</td><td>Theatrical style for trailers and spots.</td></tr>
+        <tr><td><code>sad</code></td><td>Sad</td><td>0.30</td><td>0.60</td><td>0.45</td><td>More contained and dragged.</td></tr>
+        <tr><td><code>melancholic</code></td><td>Melancholic</td><td>0.35</td><td>0.65</td><td>0.50</td><td>More introspective.</td></tr>
+        <tr><td><code>fearful</code></td><td>Tense</td><td>0.75</td><td>0.50</td><td>1.05</td><td>Slight instability and tension.</td></tr>
+        <tr><td><code>angry</code></td><td>Angry</td><td>0.90</td><td>0.75</td><td>0.85</td><td>More emphasis and attack.</td></tr>
+        <tr><td><code>whispery</code></td><td>Whisper</td><td>0.15</td><td>0.45</td><td>0.50</td><td>Try combining with a reference audio.</td></tr>
+        <tr><td><code>romantic</code></td><td>Romantic</td><td>0.35</td><td>0.50</td><td>0.72</td><td>Softer and warmer.</td></tr>
+        <tr><td><code>comic</code></td><td>Comic</td><td>0.90</td><td>0.40</td><td>1.10</td><td>More elasticity in delivery.</td></tr>
+        <tr><td><code>commercial</code></td><td>Commercial</td><td>0.65</td><td>0.55</td><td>0.90</td><td>Advertising voiceover tone.</td></tr>
+        <tr><td><code>podcast</code></td><td>Podcast</td><td>0.30</td><td>0.60</td><td>0.70</td><td>Natural and comfortable for long speech.</td></tr>
+        <tr><td><code>urgent</code></td><td>Urgent</td><td>0.80</td><td>0.70</td><td>1.00</td><td>More pressure and pace.</td></tr>
+        <tr><td><code>instructional</code></td><td>Instructional</td><td>0.25</td><td>0.75</td><td>0.55</td><td>Clear and didactic.</td></tr>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>API Endpoints</h2>
+      <table>
+        <tr><th>Endpoint</th><th>Method</th><th>Description</th></tr>
+        <tr><td><code>/</code></td><td>GET</td><td>Returns the main web interface.</td></tr>
+        <tr><td><code>/health</code></td><td>GET</td><td>Returns <code>{"status":"ok"}</code>.</td></tr>
+        <tr><td><code>/config</code></td><td>GET</td><td>Returns runtime info, supported languages, quality modes, and upload limit.</td></tr>
+        <tr><td><code>/generate</code></td><td>POST</td><td>Generates a WAV file from input text and parameters.</td></tr>
+      </table>
+
+      <h3>GET /config response includes</h3>
+      <div class="tag-list">
+        <span class="tag">device</span>
+        <span class="tag">device_mode</span>
+        <span class="tag">cuda_available</span>
+        <span class="tag">gpu_name</span>
+        <span class="tag">cpu_name</span>
+        <span class="tag">default_language</span>
+        <span class="tag">languages</span>
+        <span class="tag">quality_modes</span>
+        <span class="tag">audio_prompt_max_mb</span>
+      </div>
+
+      <h3>POST /generate form fields</h3>
+      <table>
+        <tr><th>Field</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+        <tr><td><code>text</code></td><td>string</td><td>Yes</td><td>None</td><td>Input text to synthesize. Empty text is rejected.</td></tr>
+        <tr><td><code>language_id</code></td><td>string</td><td>No</td><td><code>en</code></td><td>Language code. Must match a supported language. Portuguese aliases <code>pt-BR</code> and <code>pt-PT</code> are accepted and map to the multilingual <code>pt</code> model.</td></tr>
+        <tr><td><code>quality_mode</code></td><td>string</td><td>No</td><td><code>max</code></td><td>One of <code>ultra</code>, <code>max</code>, <code>fast</code>.</td></tr>
+        <tr><td><code>exaggeration</code></td><td>float</td><td>No</td><td><code>0.5</code></td><td>Range <code>0.0</code> to <code>1.0</code>.</td></tr>
+        <tr><td><code>cfg_weight</code></td><td>float</td><td>No</td><td><code>0.5</code></td><td>Range <code>0.0</code> to <code>1.0</code>.</td></tr>
+        <tr><td><code>temperature</code></td><td>float</td><td>No</td><td><code>0.8</code></td><td>Range <code>0.1</code> to <code>2.0</code>.</td></tr>
+        <tr><td><code>audio_prompt</code></td><td>file</td><td>No</td><td>None</td><td>Optional voice reference file. Accepted types: <code>.wav</code>, <code>.mp3</code>, <code>.flac</code>, <code>.m4a</code>, <code>.ogg</code>. Max size: 15 MB.</td></tr>
+      </table>
+
+      <h3>Response headers returned by /generate</h3>
+      <table>
+        <tr><th>Header</th><th>Description</th></tr>
+        <tr><td><code>X-Character-Count</code></td><td>Number of input characters processed.</td></tr>
+        <tr><td><code>X-Language-Id</code></td><td>Requested language code used by the client, including aliases such as <code>pt-BR</code> or <code>pt-PT</code>.</td></tr>
+        <tr><td><code>X-Model-Language-Id</code></td><td>Actual model language code used internally, such as <code>pt</code>.</td></tr>
+        <tr><td><code>X-Backend</code></td><td><code>standard</code> or <code>multilingual</code>.</td></tr>
+        <tr><td><code>X-Device</code></td><td><code>cpu</code> or <code>cuda</code>.</td></tr>
+        <tr><td><code>X-Quality-Mode</code></td><td>Applied quality mode.</td></tr>
+        <tr><td><code>X-Output-Filename</code></td><td>Generated WAV file name.</td></tr>
+        <tr><td><code>X-Request-Id</code></td><td>Unique request identifier for logs and tracing.</td></tr>
+      </table>
+    </section>
+
+    <section class="panel grid two-col">
+      <div class="card">
+        <h2>API Examples</h2>
+        <h3>cURL</h3>
+        <pre><code>curl -X POST "http://127.0.0.1:8000/generate" \
+  -F "text=Hello, this is a voice test." \
+  -F "language_id=en" \
+  -F "quality_mode=max" \
+  -F "exaggeration=0.5" \
+  -F "cfg_weight=0.5" \
+  -F "temperature=0.8" \
+  --output chatterbox.wav</code></pre>
+
+        <h3>With reference audio</h3>
+        <pre><code>curl -X POST "http://127.0.0.1:8000/generate" \
+  -F "text=Clone this voice." \
+  -F "language_id=en" \
+  -F "quality_mode=max" \
+  -F "audio_prompt=@reference.wav" \
+  --output chatterbox.wav</code></pre>
+      </div>
+      <div class="card">
+        <h2>PowerShell and Python</h2>
+        <h3>PowerShell</h3>
+        <pre><code>$form = @{
+  text = "Hello, this is a voice test."
+  language_id = "en"
+  quality_mode = "max"
+  exaggeration = "0.5"
+  cfg_weight = "0.5"
+  temperature = "0.8"
+}
+
+Invoke-RestMethod -Uri "http://127.0.0.1:8000/generate" -Method Post -Form $form -OutFile "chatterbox.wav"</code></pre>
+
+        <h3>Python</h3>
+        <pre><code>import requests
+
+response = requests.post(
+    "http://127.0.0.1:8000/generate",
+    data={
+        "text": "Hello, this is a voice test.",
+        "language_id": "en",
+        "quality_mode": "max",
+        "exaggeration": "0.5",
+        "cfg_weight": "0.5",
+        "temperature": "0.8",
+    },
+)
+
+with open("chatterbox.wav", "wb") as f:
+    f.write(response.content)
+
+print(response.headers.get("X-Backend"))
+print(response.headers.get("X-Device"))</code></pre>
+      </div>
+    </section>
+
+    <section class="panel grid two-col">
+      <div class="card">
+        <h2>How To Use The Web App</h2>
+        <ol>
+          <li>Open <code>http://127.0.0.1:8000/</code>.</li>
+          <li>Choose a language.</li>
+          <li>Choose an emotion preset or leave the default.</li>
+          <li>Select a quality mode.</li>
+          <li>Optionally upload a reference audio file.</li>
+          <li>Enter the text to synthesize.</li>
+          <li>Click <strong>Generate audio</strong>.</li>
+          <li>Listen in the built-in player or download the WAV file.</li>
+        </ol>
+      </div>
+      <div class="card">
+        <h2>Operational Notes</h2>
+        <ul>
+          <li>The first model load can take longer than later requests.</li>
+          <li>English is typically faster than multilingual generation.</li>
+          <li>Long inputs are more stable in <code>ultra</code> or <code>max</code> mode.</li>
+          <li>Each request generates a temporary output file and returns it as a download.</li>
+          <li>Device selection can be influenced with the <code>CHATTERBOX_DEVICE</code> environment variable using <code>auto</code>, <code>cpu</code>, or <code>cuda</code>.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+
+

@@ -115,6 +115,15 @@ class AppBehaviorTests(unittest.TestCase):
         self.assertIn("quality_modes", payload)
         self.assertEqual(payload["audio_prompt_max_mb"], 15)
         self.assertEqual(payload["quality_modes"][1]["id"], "max")
+        language_ids = {item["id"] for item in payload["languages"]}
+        self.assertIn("pt-br", language_ids)
+        self.assertIn("pt-pt", language_ids)
+
+    def test_api_docs_returns_html_document(self):
+        client = TestClient(app_module.app)
+        response = client.get("/api-docs")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/html", response.headers.get("content-type", ""))
 
     def test_resolve_generation_backend_routes_english_and_multilingual(self):
         standard_model = object()
@@ -140,7 +149,7 @@ class AppBehaviorTests(unittest.TestCase):
                 files={"audio_prompt": ("voice.txt", io.BytesIO(b"invalid"), "text/plain")},
             )
         self.assertEqual(response.status_code, 400)
-        self.assertIn("formatos", response.json()["detail"])
+        self.assertIn("Supported formats", response.json()["detail"])
 
     def test_generate_rejects_invalid_temperature(self):
         client = TestClient(app_module.app)
@@ -167,7 +176,7 @@ class AppBehaviorTests(unittest.TestCase):
                 files={"audio_prompt": ("voice.wav", oversize, "audio/wav")},
             )
         self.assertEqual(response.status_code, 413)
-        self.assertIn("limite", response.json()["detail"])
+        self.assertIn("15 MB limit", response.json()["detail"])
 
     def test_generate_fast_mode_uses_direct_model_generation(self):
         client = TestClient(app_module.app)
@@ -223,6 +232,22 @@ class AppBehaviorTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("X-Request-Id"), "abc123")
 
+    def test_generate_accepts_portuguese_alias_and_exposes_model_language_header(self):
+        client = TestClient(app_module.app)
+        fake_model = FakeModel()
+        with patch.object(app_module, "resolve_generation_backend", return_value=(fake_model, "multilingual")), patch.object(
+            app_module, "generate_chunked_audio", return_value=FakeTensor("chunked")
+        ):
+            response = client.post(
+                "/generate",
+                data={"text": "teste em portugues", "language_id": "pt-br", "quality_mode": "max"},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("X-Language-Id"), "pt-br")
+        self.assertEqual(response.headers.get("X-Model-Language-Id"), "pt")
+
 
 if __name__ == "__main__":
     unittest.main()
+
+
