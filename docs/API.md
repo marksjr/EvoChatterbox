@@ -184,5 +184,6 @@ Included requests:
 To import:
 1. Open Postman
 2. Click **Import**
-3. Select `postman_collection.json`
+3. Select `docs/postman_collection.json`
 4. Adjust the `base_url` variable if needed
+

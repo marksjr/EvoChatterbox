@@ -53,8 +53,8 @@ Available when the server is running:
 
 Additional files:
 
-- API reference: `API.md`
-- Postman collection: `postman_collection.json`
+- API reference: `docs/API.md`
+- Postman collection: `docs/postman_collection.json`
 
 ## Quality Modes
 
@@ -102,9 +102,9 @@ app.py
 install.bat
 start.bat
 requirements.txt
-API.md
+docs/API.md
 README.md
-postman_collection.json
+docs/postman_collection.json
 static/
   index.html
   app.js
@@ -157,3 +157,5 @@ Ignored from version control:
 - English typically runs faster than multilingual generation.
 - CUDA affects speed, not core output quality.
 - Each generation request returns a WAV file and temporary output is cleaned up automatically.
+
+
