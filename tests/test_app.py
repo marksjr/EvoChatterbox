@@ -246,8 +246,23 @@ class AppBehaviorTests(unittest.TestCase):
         self.assertEqual(response.headers.get("X-Language-Id"), "pt-br")
         self.assertEqual(response.headers.get("X-Model-Language-Id"), "pt")
 
+    def test_generate_returns_resource_hint_when_generation_fails_on_cpu(self):
+        client = TestClient(app_module.app)
+        fake_model = FakeModel()
+        with patch.object(app_module, "resolve_generation_backend", return_value=(fake_model, "standard")), patch.object(
+            app_module, "generate_chunked_audio", side_effect=RuntimeError("model crashed during long cpu generation")
+        ), patch.object(app_module, "resolve_device", return_value="cpu"):
+            response = client.post(
+                "/generate",
+                data={"text": "texto muito grande", "language_id": "en", "quality_mode": "max"},
+            )
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("quality_mode=fast", response.json()["detail"])
+        self.assertIn("CPU was too slow", response.json()["detail"])
+
 
 if __name__ == "__main__":
     unittest.main()
+
 
 

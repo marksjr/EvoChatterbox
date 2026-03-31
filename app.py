@@ -85,6 +85,7 @@ MAX_EXAGGERATION = 1.0
 MAX_CFG_WEIGHT = 1.0
 MIN_TEMPERATURE = 0.1
 MAX_TEMPERATURE = 2.0
+LOW_RESOURCE_ERROR_HINT = "Audio generation failed. This usually means the machine ran out of RAM/VRAM or the CPU was too slow for the selected text and quality mode. Try quality_mode=fast, a shorter text, or a machine with more resources."
 
 
 def resolve_device() -> str:
@@ -300,6 +301,27 @@ def remove_file(path: Path) -> None:
         logger.warning("Could not remove temporary file: %s", path)
 
 
+def classify_generation_error(exc: Exception) -> str:
+    message = str(exc).strip()
+    lowered = message.lower()
+    resource_markers = (
+        "out of memory",
+        "cuda out of memory",
+        "not enough memory",
+        "insufficient memory",
+        "std::bad_alloc",
+        "bad allocation",
+        "resource exhausted",
+        "paging file",
+        "cannot allocate",
+    )
+    if any(marker in lowered for marker in resource_markers):
+        return LOW_RESOURCE_ERROR_HINT
+    if resolve_device() == "cpu":
+        return LOW_RESOURCE_ERROR_HINT
+    return "Internal error during audio generation."
+
+
 @app.middleware("http")
 async def add_request_logging(request: Request, call_next):
     request_id = request.headers.get("X-Request-Id") or uuid4().hex[:12]
@@ -457,10 +479,12 @@ async def generate_audio(
         raise
     except Exception as exc:
         remove_file(output_path)
-        logger.exception("request_id=%s action=generate_failure", request_id)
-        raise HTTPException(status_code=500, detail="Internal error during audio generation.") from exc
+        detail = classify_generation_error(exc)
+        logger.exception("request_id=%s action=generate_failure detail=%s", request_id, detail)
+        raise HTTPException(status_code=500, detail=detail) from exc
     finally:
         shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 
 
