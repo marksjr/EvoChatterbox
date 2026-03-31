@@ -4,6 +4,9 @@ title Evo Chatterbox - Setup
 cd /d "%~dp0"
 chcp 65001 >nul 2>nul
 
+call :preflight_checks
+if errorlevel 1 exit /b 1
+
 echo.
 echo ==========================================
 echo   Evo Chatterbox - First Time Setup
@@ -14,15 +17,18 @@ echo   It may take a few minutes.
 echo   Do not close this window.
 echo.
 
+set "BOOTSTRAP_PYTHON="
+set "USE_VENV=1"
+set "PY_VER=3.11.9"
+set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
+set "PY_URL=https://www.python.org/ftp/python/%PY_VER%/%PY_ZIP%"
+set "PIP_URL=https://bootstrap.pypa.io/get-pip.py"
+set "PY_DIR=%~dp0python"
+
 :: ------------------------------------------
 ::  Detect Python
 :: ------------------------------------------
-set "BOOTSTRAP_PYTHON="
-set "USE_VENV=1"
-
-:: Check for portable python folder
 if exist "%~dp0python\python.exe" (
-    :: Check if this is an embeddable install (has ._pth file, no venv support)
     if exist "%~dp0python\python*._pth" (
         set "BOOTSTRAP_PYTHON=%~dp0python\python.exe"
         set "USE_VENV=0"
@@ -30,7 +36,9 @@ if exist "%~dp0python\python.exe" (
         set "BOOTSTRAP_PYTHON=%~dp0python\python.exe"
     )
 )
+
 if not defined BOOTSTRAP_PYTHON if exist "%~dp0runtime\python.exe" set "BOOTSTRAP_PYTHON=%~dp0runtime\python.exe"
+
 if not defined BOOTSTRAP_PYTHON (
     where python >nul 2>nul
     if errorlevel 1 goto :auto_install_python
@@ -41,26 +49,15 @@ echo   Python found: %BOOTSTRAP_PYTHON%
 echo.
 goto :setup_env
 
-:: ------------------------------------------
-::  Auto-install Python Embeddable
-:: ------------------------------------------
 :auto_install_python
-echo   Python not found. Downloading portable version...
+echo   Python not found.
+echo   Downloading portable Python automatically...
 echo.
 
-set "PY_VER=3.11.9"
-set "PY_ZIP=python-%PY_VER%-embed-amd64.zip"
-set "PY_URL=https://www.python.org/ftp/python/%PY_VER%/%PY_ZIP%"
-set "PIP_URL=https://bootstrap.pypa.io/get-pip.py"
-set "PY_DIR=%~dp0python"
-
-:: Download embeddable zip
-echo   [1/3] Downloading Python %PY_VER% (~11 MB)...
-curl.exe -L --fail --progress-bar -o "%~dp0%PY_ZIP%" "%PY_URL%"
+call :download_file "%PY_URL%" "%~dp0%PY_ZIP%"
 if errorlevel 1 goto :fail_python_download
 if not exist "%~dp0%PY_ZIP%" goto :fail_python_download
 
-:: Extract
 echo   [2/3] Extracting Python...
 if exist "%PY_DIR%" rmdir /s /q "%PY_DIR%"
 mkdir "%PY_DIR%"
@@ -70,14 +67,12 @@ del "%~dp0%PY_ZIP%" 2>nul
 
 if not exist "%PY_DIR%\python.exe" goto :fail_python_extract
 
-:: Enable site-packages by uncommenting "import site" in ._pth file
 for %%f in ("%PY_DIR%\python*._pth") do (
     powershell -NoProfile -Command "(Get-Content '%%f') -replace '^#import site','import site' | Set-Content '%%f'"
 )
 
-:: Install pip
 echo   [3/3] Installing pip...
-curl.exe -L --fail --silent -o "%PY_DIR%\get-pip.py" "%PIP_URL%"
+call :download_file "%PIP_URL%" "%PY_DIR%\get-pip.py"
 if errorlevel 1 goto :fail_pip
 "%PY_DIR%\python.exe" "%PY_DIR%\get-pip.py" --no-warn-script-location >nul 2>nul
 if errorlevel 1 goto :fail_pip
@@ -89,12 +84,7 @@ echo.
 echo   Python %PY_VER% portable installed!
 echo.
 
-:: ------------------------------------------
-::  Setup environment
-:: ------------------------------------------
 :setup_env
-
-:: Create local cache directories
 if not exist ".cache\huggingface\hub" mkdir ".cache\huggingface\hub"
 if not exist ".cache\pkuseg" mkdir ".cache\pkuseg"
 if not exist "output" mkdir "output"
@@ -104,9 +94,6 @@ set "HUGGINGFACE_HUB_CACHE=%cd%\.cache\huggingface\hub"
 set "PKUSEG_HOME=%cd%\.cache\pkuseg"
 set "HF_HUB_DISABLE_SYMLINKS_WARNING=1"
 
-:: ------------------------------------------
-::  Determine which Python to use for packages
-:: ------------------------------------------
 if "%USE_VENV%"=="0" (
     set "APP_PYTHON=%BOOTSTRAP_PYTHON%"
     echo [1/4] Using portable Python directly...
@@ -124,9 +111,6 @@ if "%USE_VENV%"=="0" (
 )
 echo.
 
-:: ------------------------------------------
-::  Step 2: Install dependencies
-:: ------------------------------------------
 echo [2/4] Installing dependencies...
 echo       This may take a while on first run.
 "%APP_PYTHON%" -m pip install --upgrade pip >nul 2>nul
@@ -135,14 +119,11 @@ if errorlevel 1 goto :fail_install
 echo       Done.
 echo.
 
-:: ------------------------------------------
-::  Step 3: Detect GPU
-:: ------------------------------------------
 echo [3/4] Checking for NVIDIA GPU...
 where nvidia-smi >nul 2>nul
 if errorlevel 1 (
     echo       No NVIDIA GPU detected. Using CPU mode.
-    echo       [This is normal if you don't have a dedicated graphics card]
+    echo       [This is normal if you do not have a dedicated graphics card]
     echo.
     goto :install_done
 )
@@ -164,13 +145,8 @@ if errorlevel 1 goto :fail_install
 echo       GPU acceleration installed!
 echo.
 
-:: ------------------------------------------
-::  Step 4: Save install marker
-:: ------------------------------------------
 :install_done
 echo [4/4] Finishing setup...
-
-:: Save marker with mode info so start.bat knows which python to use
 if "%USE_VENV%"=="0" (
     echo embed> ".installed"
 ) else (
@@ -189,18 +165,115 @@ echo ==========================================
 pause
 exit /b 0
 
-:: ==========================================
-::   Error Messages
-:: ==========================================
+:download_file
+set "DOWNLOAD_URL=%~1"
+set "DOWNLOAD_DEST=%~2"
+where curl.exe >nul 2>nul
+if not errorlevel 1 (
+    echo   [1/3] Downloading with curl...
+    curl.exe -L --fail --progress-bar -o "%DOWNLOAD_DEST%" "%DOWNLOAD_URL%"
+    exit /b %errorlevel%
+)
+
+powershell -NoProfile -Command "exit 0" >nul 2>nul
+if errorlevel 1 exit /b 1
+
+echo   [1/3] Downloading with PowerShell...
+powershell -NoProfile -Command "Invoke-WebRequest -UseBasicParsing '%DOWNLOAD_URL%' -OutFile '%DOWNLOAD_DEST%'"
+exit /b %errorlevel%
+
+:preflight_checks
+if not exist "requirements.txt" goto :fail_missing_requirements
+
+echo test> ".write_test.tmp" 2>nul
+if errorlevel 1 goto :fail_write_permission
+del ".write_test.tmp" 2>nul
+
+for %%I in ("%cd%") do set "INSTALL_DRIVE=%%~dI"
+for /f %%A in ('powershell -NoProfile -Command "[int]([math]::Floor(((Get-PSDrive -Name ''%INSTALL_DRIVE:~0,1%'').Free/1GB)))"') do set "FREE_GB=%%A"
+if not defined FREE_GB set "FREE_GB=0"
+if %FREE_GB% LSS 8 goto :fail_low_disk
+
+where powershell >nul 2>nul
+if errorlevel 1 goto :fail_missing_powershell
+
+goto :eof
+
+:fail_missing_requirements
+echo.
+echo ==========================================
+echo   requirements.txt was not found!
+echo ==========================================
+echo.
+echo   The installer cannot continue because the
+echo   dependency list is missing from the folder.
+echo.
+echo   Make sure all project files were extracted
+echo   correctly and run install.bat again.
+echo.
+echo ==========================================
+pause
+exit /b 1
+
+:fail_write_permission
+echo.
+echo ==========================================
+echo   Cannot write to this folder!
+echo ==========================================
+echo.
+echo   Move the project to a writable folder such as
+echo   Desktop or Documents and try again.
+echo.
+echo ==========================================
+pause
+exit /b 1
+
+:fail_low_disk
+echo.
+echo ==========================================
+echo   Not enough free disk space!
+echo ==========================================
+echo.
+echo   Evo Chatterbox needs several GB for Python,
+echo   dependencies, cache, and AI models.
+echo.
+echo   Free space detected: %FREE_GB% GB
+echo   Recommended minimum before setup: 8 GB
+echo   Recommended safer target: 10+ GB
+echo.
+echo ==========================================
+pause
+exit /b 1
+
+:fail_missing_powershell
+echo.
+echo ==========================================
+echo   PowerShell was not available!
+echo ==========================================
+echo.
+echo   PowerShell is required to extract the
+echo   portable Python package automatically.
+echo.
+echo   Use Windows PowerShell or place a portable
+echo   Python inside:
+echo   python\python.exe
+echo.
+echo ==========================================
+pause
+exit /b 1
+
 :fail_python_download
 del "%~dp0%PY_ZIP%" 2>nul
 echo.
 echo ==========================================
-echo   Could not download Python!
+echo   Could not download portable Python!
 echo ==========================================
 echo.
 echo   Check your internet connection and
 echo   try running install.bat again.
+echo.
+echo   Expected download:
+echo   %PY_URL%
 echo.
 echo ==========================================
 pause
@@ -247,7 +320,7 @@ echo.
 echo   Try:
 echo   1. Check your internet connection
 echo   2. Temporarily disable your antivirus
-echo   3. Run install.bat again
+echo   3. Run install.bat again or provide python\python.exe
 echo.
 echo   If the error persists, delete the
 echo   ".venv" folder (or "python" folder)

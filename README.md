@@ -39,7 +39,8 @@ The application keeps inference local. Text and reference audio are processed on
 ## Requirements
 
 - Windows 10 or Windows 11
-- Python 3.11+
+- Internet connection on first install
+- No preinstalled Python required: `install.bat` downloads portable Python 3.11 automatically with `curl` when Python is missing
 - Optional NVIDIA GPU for faster generation
 
 ## API and Docs
@@ -157,5 +158,6 @@ Ignored from version control:
 - English typically runs faster than multilingual generation.
 - CUDA affects speed, not core output quality.
 - Each generation request returns a WAV file and temporary output is cleaned up automatically.
+
 
 
