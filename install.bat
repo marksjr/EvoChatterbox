@@ -189,13 +189,15 @@ echo test> ".write_test.tmp" 2>nul
 if errorlevel 1 goto :fail_write_permission
 del ".write_test.tmp" 2>nul
 
-for %%I in ("%cd%") do set "INSTALL_DRIVE=%%~dI"
-for /f %%A in ('powershell -NoProfile -Command "[int]([math]::Floor(((Get-PSDrive -Name ''%INSTALL_DRIVE:~0,1%'').Free/1GB)))"') do set "FREE_GB=%%A"
-if not defined FREE_GB set "FREE_GB=0"
-if %FREE_GB% LSS 8 goto :fail_low_disk
-
 where powershell >nul 2>nul
 if errorlevel 1 goto :fail_missing_powershell
+
+set "INSTALL_DRIVE=%~d0"
+set "INSTALL_DRIVE_LETTER=%INSTALL_DRIVE:~0,1%"
+set "FREE_GB="
+for /f %%A in ('powershell -NoProfile -Command "$psdrive = Get-PSDrive -Name ''%INSTALL_DRIVE_LETTER%'' -ErrorAction SilentlyContinue; if ($psdrive -and $null -ne $psdrive.Free) { [int][math]::Floor($psdrive.Free / 1GB) }"') do set "FREE_GB=%%A"
+if not defined FREE_GB set "FREE_GB=0"
+if !FREE_GB! LSS 8 goto :fail_low_disk
 
 goto :eof
 
@@ -237,7 +239,7 @@ echo.
 echo   Evo Chatterbox needs several GB for Python,
 echo   dependencies, cache, and AI models.
 echo.
-echo   Free space detected: %FREE_GB% GB
+echo   Free space detected: !FREE_GB! GB
 echo   Recommended minimum before setup: 8 GB
 echo   Recommended safer target: 10+ GB
 echo.
@@ -329,3 +331,4 @@ echo.
 echo ==========================================
 pause
 exit /b 1
+
