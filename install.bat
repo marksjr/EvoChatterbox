@@ -76,24 +76,35 @@ exit /b 0
 
 :ensure_python
 if exist "%~dp0python\python.exe" (
-    if exist "%~dp0python\python*._pth" (
-        set "BOOTSTRAP_PYTHON=%~dp0python\python.exe"
-        set "USE_VENV=0"
-    ) else (
-        set "BOOTSTRAP_PYTHON=%~dp0python\python.exe"
+    call :validate_python_command "%~dp0python\python.exe"
+    if not errorlevel 1 (
+        if exist "%~dp0python\python*._pth" (
+            set "USE_VENV=0"
+        )
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
     )
 )
 
-if not defined BOOTSTRAP_PYTHON if exist "%~dp0runtime\python.exe" set "BOOTSTRAP_PYTHON=%~dp0runtime\python.exe"
-
-if not defined BOOTSTRAP_PYTHON (
-    where python >nul 2>nul
-    if errorlevel 1 goto :auto_install_python
-    set "BOOTSTRAP_PYTHON=python"
+if exist "%~dp0runtime\python.exe" (
+    call :validate_python_command "%~dp0runtime\python.exe"
+    if not errorlevel 1 (
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
+    )
 )
 
-echo       Python found: %BOOTSTRAP_PYTHON%
-exit /b 0
+where python >nul 2>nul
+if not errorlevel 1 (
+    call :validate_python_command python
+    if not errorlevel 1 (
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
+    )
+    echo       Ignoring invalid Python command from PATH.
+)
+
+goto :auto_install_python
 
 :auto_install_python
 echo       Python not found.
@@ -125,6 +136,13 @@ del "%PY_DIR%\get-pip.py" 2>nul
 set "BOOTSTRAP_PYTHON=%PY_DIR%\python.exe"
 set "USE_VENV=0"
 echo       Python %PY_VER% portable installed.
+exit /b 0
+
+:validate_python_command
+set "BOOTSTRAP_PYTHON="
+%~1 -c "import sys" >nul 2>nul
+if errorlevel 1 exit /b 1
+set "BOOTSTRAP_PYTHON=%~1"
 exit /b 0
 
 :prepare_runtime_dirs
@@ -394,3 +412,6 @@ echo.
 echo ==========================================
 pause
 exit /b 1
+
+
+
