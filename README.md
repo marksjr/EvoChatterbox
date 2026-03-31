@@ -32,7 +32,7 @@ The application keeps inference local. Text and reference audio are processed on
 ## Quick Start
 
 1. Clone or download the repository.
-2. Run `install.bat` once.
+2. Run `install.bat` once. It checks each setup requirement step by step and installs only what is missing.
 3. Run `start.bat`.
 4. Open `http://127.0.0.1:8000`.
 
@@ -40,7 +40,7 @@ The application keeps inference local. Text and reference audio are processed on
 
 - Windows 10 or Windows 11
 - Internet connection on first install
-- No preinstalled Python required: `install.bat` downloads portable Python 3.11 automatically with `curl` when Python is missing
+- No preinstalled Python required: `install.bat` checks for Python first and downloads portable Python 3.11 automatically when Python is missing
 - Optional NVIDIA GPU for faster generation
 
 ## API and Docs
@@ -158,6 +158,7 @@ Ignored from version control:
 - English typically runs faster than multilingual generation.
 - CUDA affects speed, not core output quality.
 - Each generation request returns a WAV file and temporary output is cleaned up automatically.
+
 
 
 
