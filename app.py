@@ -194,7 +194,31 @@ def get_tts_model() -> ChatterboxTTS:
     if _tts_model is None:
         with _tts_model_lock:
             if _tts_model is None:
-                _tts_model = ChatterboxTTS.from_pretrained(device=resolve_device())
+                # Modificado para forçar o download do vocoder v3 (s3gen_v3)
+                from huggingface_hub import hf_hub_download
+                import shutil
+                
+                device = resolve_device()
+                
+                # Regra original para Mac
+                if device == "mps" and not torch.backends.mps.is_available():
+                    device = "cpu"
+
+                REPO_ID = "ResembleAI/chatterbox"
+                local_dir = None
+                
+                # Baixa os arquivos padrão
+                for fpath in ["ve.safetensors", "t3_cfg.safetensors", "tokenizer.json", "conds.pt"]:
+                    local_dir = Path(hf_hub_download(repo_id=REPO_ID, filename=fpath)).parent
+                
+                # Baixa o vocoder v3 e o renomeia para o nome que a biblioteca 0.1.7 espera
+                s3gen_v3_path = Path(hf_hub_download(repo_id=REPO_ID, filename="s3gen_v3.safetensors"))
+                s3gen_v2_path = s3gen_v3_path.parent / "s3gen.safetensors"
+                
+                if s3gen_v3_path.exists() and not s3gen_v2_path.exists():
+                    shutil.copyfile(s3gen_v3_path, s3gen_v2_path)
+                
+                _tts_model = ChatterboxTTS.from_local(local_dir, device)
     return _tts_model
 
 
@@ -211,7 +235,7 @@ def get_multilingual_model() -> ChatterboxMultilingualTTS:
                         revision="main",
                         allow_patterns=[
                             "ve.pt",
-                            "t3_mtl23ls_v2.safetensors",
+                            "t3_mtl23ls_v3.safetensors",
                             "s3gen.pt",
                             "grapheme_mtl_merged_expanded_v1.json",
                             "conds.pt",
@@ -221,6 +245,14 @@ def get_multilingual_model() -> ChatterboxMultilingualTTS:
                         token=os.getenv("HF_TOKEN"),
                     )
                 )
+                
+                # Aliasing v3 filenames to v2 so chatterbox-tts 0.1.7 can load them
+                import shutil
+                v3_t3 = ckpt_dir / "t3_mtl23ls_v3.safetensors"
+                v2_t3 = ckpt_dir / "t3_mtl23ls_v2.safetensors"
+                if v3_t3.exists() and not v2_t3.exists():
+                    shutil.copyfile(v3_t3, v2_t3)
+                    
                 _multilingual_model = ChatterboxMultilingualTTS.from_local(ckpt_dir, resolve_device())
     return _multilingual_model
 

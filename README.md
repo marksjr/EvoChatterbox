@@ -32,16 +32,16 @@ The application keeps inference local. Text and reference audio are processed on
 ## Quick Start
 
 1. Clone or download the repository.
-2. Run `install.bat` once. It checks each setup requirement step by step and installs only what is missing.
-3. Run `start.bat`.
-4. Open `http://127.0.0.1:8000`.
+2. Double-click `start.bat` (or `install.bat`).
+   - *First-time run:* `start.bat` detects a fresh installation, automatically runs full setup (`install.bat`), installs all missing dependencies, launches the server, and opens your browser.
+3. The interface opens automatically at `http://127.0.0.1:8000`.
 
 ## Requirements
 
 - Windows 10 or Windows 11
 - Internet connection on first install
-- No preinstalled Python required: `install.bat` checks for Python first and downloads portable Python 3.11 automatically when Python is missing
-- Optional NVIDIA GPU for faster generation
+- No preinstalled Python required: setup automatically detects existing Python (system, `py` launcher, venv) or downloads portable Python 3.11 automatically
+- Optional NVIDIA GPU for faster CUDA generation
 
 ## API and Docs
 

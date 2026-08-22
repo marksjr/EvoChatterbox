@@ -84,7 +84,7 @@ echo.
 echo   Starting local server...
 echo   [First model load may take a while]
 echo.
-start "Evo Chatterbox Server" cmd /k "title Evo Chatterbox Server && "!APP_PYTHON!" -m uvicorn app:app --host 127.0.0.1 --port 8000"
+start "Evo Chatterbox Server" cmd /k ""!APP_PYTHON!" -m uvicorn app:app --host 127.0.0.1 --port 8000"
 
 echo   Waiting for server to be ready...
 powershell -NoProfile -Command "$deadline=(Get-Date).AddSeconds(120); while((Get-Date) -lt $deadline){ try { Invoke-WebRequest -UseBasicParsing 'http://127.0.0.1:8000/health' | Out-Null; exit 0 } catch { Write-Host -NoNewline '.'; Start-Sleep -Milliseconds 1000 } }; exit 1"

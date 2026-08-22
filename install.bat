@@ -94,6 +94,14 @@ if exist "%~dp0runtime\python.exe" (
     )
 )
 
+if exist "%~dp0.venv\Scripts\python.exe" (
+    call :validate_python_command "%~dp0.venv\Scripts\python.exe"
+    if not errorlevel 1 (
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
+    )
+)
+
 where python >nul 2>nul
 if not errorlevel 1 (
     call :validate_python_command python
@@ -102,6 +110,54 @@ if not errorlevel 1 (
         exit /b 0
     )
     echo       Ignoring invalid Python command from PATH.
+)
+
+where py >nul 2>nul
+if not errorlevel 1 (
+    call :validate_python_command "py -3.11"
+    if not errorlevel 1 (
+        echo       Python 3.11 found via py launcher.
+        exit /b 0
+    )
+    call :validate_python_command "py -3"
+    if not errorlevel 1 (
+        echo       Python 3 found via py launcher.
+        exit /b 0
+    )
+)
+
+where python3 >nul 2>nul
+if not errorlevel 1 (
+    call :validate_python_command python3
+    if not errorlevel 1 (
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
+    )
+)
+
+if defined LOCALAPPDATA (
+    if exist "!LOCALAPPDATA!\Programs\Python\Python311\python.exe" (
+        call :validate_python_command "!LOCALAPPDATA!\Programs\Python\Python311\python.exe"
+        if not errorlevel 1 (
+            echo       Python found: !BOOTSTRAP_PYTHON!
+            exit /b 0
+        )
+    )
+    if exist "!LOCALAPPDATA!\Programs\Python\Python310\python.exe" (
+        call :validate_python_command "!LOCALAPPDATA!\Programs\Python\Python310\python.exe"
+        if not errorlevel 1 (
+            echo       Python found: !BOOTSTRAP_PYTHON!
+            exit /b 0
+        )
+    )
+)
+
+if exist "C:\Python311\python.exe" (
+    call :validate_python_command "C:\Python311\python.exe"
+    if not errorlevel 1 (
+        echo       Python found: !BOOTSTRAP_PYTHON!
+        exit /b 0
+    )
 )
 
 goto :auto_install_python
@@ -140,7 +196,7 @@ exit /b 0
 
 :validate_python_command
 set "BOOTSTRAP_PYTHON="
-%~1 -c "import sys" >nul 2>nul
+%~1 -c "import sys; exit(0 if sys.version_info >= (3, 9) and sys.version_info < (3, 13) else 1)" >nul 2>nul
 if errorlevel 1 exit /b 1
 set "BOOTSTRAP_PYTHON=%~1"
 exit /b 0
@@ -212,8 +268,16 @@ echo       Python packages are ready.
 exit /b 0
 
 :ensure_gpu_acceleration
+set "HAS_NVIDIA_GPU=0"
 where nvidia-smi >nul 2>nul
-if errorlevel 1 (
+if not errorlevel 1 set "HAS_NVIDIA_GPU=1"
+if exist "%ProgramFiles%\NVIDIA Corporation\NVSMI\nvidia-smi.exe" set "HAS_NVIDIA_GPU=1"
+if "%HAS_NVIDIA_GPU%"=="0" (
+    for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "if ((Get-CimInstance Win32_VideoController).Name | Select-String -Pattern 'NVIDIA') { echo 1 } else { echo 0 }"`) do (
+        if "%%A"=="1" set "HAS_NVIDIA_GPU=1"
+    )
+)
+if "%HAS_NVIDIA_GPU%"=="0" (
     echo       No NVIDIA GPU detected. Using CPU mode.
     echo       [This is normal if you do not have a dedicated graphics card]
     exit /b 0
@@ -272,11 +336,14 @@ if !FREE_GB! LSS 8 goto :fail_low_disk
 exit /b 0
 
 :detect_free_space_gb
-set "FREE_BYTES="
-set "FREE_GB="
-for /f "tokens=3" %%A in ('dir /-c "%INSTALL_DRIVE%\" ^| find "bytes "') do set "FREE_BYTES=%%A"
-if not defined FREE_BYTES set "FREE_GB=0"
-if defined FREE_BYTES for /f "usebackq delims=" %%A in (`powershell -NoProfile -ExecutionPolicy Bypass -Command "[int](%FREE_BYTES% / 1GB)"`) do set "FREE_GB=%%A"
+set "FREE_GB=0"
+set "TEMP_SPACE_FILE=%TEMP%\evo_space_%RANDOM%.tmp"
+set "DRIVE_LETTER=%INSTALL_DRIVE:~0,1%"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "[int]((Get-PSDrive '%DRIVE_LETTER%').Free / 1GB) | Out-File -FilePath '%TEMP_SPACE_FILE%' -Encoding ascii" >nul 2>nul
+if exist "%TEMP_SPACE_FILE%" (
+    set /p FREE_GB=<"%TEMP_SPACE_FILE%"
+    del "%TEMP_SPACE_FILE%" 2>nul
+)
 if not defined FREE_GB set "FREE_GB=0"
 set /a FREE_GB=!FREE_GB!+0 >nul 2>nul
 if errorlevel 1 set "FREE_GB=0"
